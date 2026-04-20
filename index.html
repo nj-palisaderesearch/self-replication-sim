@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Self-Replication Simulator v4 — Palisade Research</title>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--border:#30363d;
+  --text:#e6edf3;--text-dim:#8b949e;--accent:#58a6ff;
+  --green:#3fb950;--red:#f85149;--orange:#f0883e;--purple:#d2a8ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--text);height:100vh;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+
+/* ── Header ── */
+header{
+  height:48px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;flex-shrink:0;
+}
+header h1{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.org{font-size:12px;color:var(--text-dim)}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.hdr-right{display:flex;gap:14px;align-items:center}
+.hdr-note{font-size:11px;color:var(--text-dim);font-style:italic}
+.hdr-right label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
+.hdr-right input[type=number]{
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  padding:4px 8px;border-radius:5px;font-size:12px;width:72px;outline:none;
+}
+.hdr-right input:focus{border-color:var(--accent)}
+
+/* ── Main layout: panel | sim-left | sim-right ── */
+main{grid-template-columns:300px 1fr 1fr;overflow:hidden}
+.tab-content{display:none;flex:1;overflow:hidden}
+.tab-content.active{display:flex}
+main.tab-content.active{display:grid}
+
+/* ── Left panel ── */
+.panel{
+  border-right:1px solid var(--border);background:var(--surface);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.panel-section{
+  padding:12px 14px;display:flex;flex-direction:column;gap:8px;
+  border-bottom:1px solid var(--border);
+}
+.panel-section:last-child{border-bottom:none;flex:1;min-height:0}
+.section-title{
+  font-size:11px;color:var(--text-dim);text-transform:uppercase;
+  letter-spacing:.06em;font-weight:600;
+}
+.model-header{
+  display:flex;align-items:center;gap:8px;
+  font-size:14px;font-weight:600;color:var(--text);
+}
+.model-header .side{font-size:11px;color:var(--text-dim);font-weight:400}
+.color-dot{width:10px;height:10px;border-radius:50%}
+
+/* Pipeline stages */
+.pipeline{display:flex;flex-direction:column;gap:4px}
+.pipe-phase{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:4px}
+.pipe-stage{display:flex;align-items:center;gap:5px;font-size:11px}
+.pipe-name{width:108px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;text-align:right}
+.pipe-bar{flex:1;height:7px;background:var(--bg);border-radius:3px;overflow:hidden}
+.pipe-fill{height:100%;border-radius:3px;transition:width .3s}
+.pipe-pct{width:32px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);font-weight:600;flex-shrink:0}
+
+/* Pane HUD — stacked top-right */
+.pane-hud{
+  position:absolute;top:8px;right:10px;
+  display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+  pointer-events:none;
+}
+.pane-chart{
+  background:rgba(22,27,34,.75);border:1px solid var(--border);
+  border-radius:6px;padding:5px;
+}
+.pane-chart canvas{display:block;width:317px;height:158px}
+.pane-stats{
+  display:flex;gap:6px;align-items:baseline;
+  background:rgba(22,27,34,.85);border:1px solid var(--border);
+  border-radius:6px;padding:6px 14px;
+}
+.pane-sv{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.pane-sl{font-size:11px;color:var(--text-dim);letter-spacing:.02em}
+
+/* Controls */
+.controls-row{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.speed-group{display:flex;align-items:center;gap:3px}
+.speed-lbl{font-size:9px;color:var(--text-dim);text-transform:uppercase;margin-right:3px}
+.spd-btn{
+  background:var(--bg);border:1px solid var(--border);color:var(--text-dim);
+  padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;
+}
+.spd-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.spd-btn:hover:not(.active){border-color:var(--text-dim)}
+.action-group{display:flex;gap:6px}
+.btn-p{
+  background:var(--accent);border:1px solid var(--accent);color:#fff;
+  padding:8px 22px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;
+  letter-spacing:.02em;
+}
+.btn-p:hover{opacity:.9}
+.btn-p:disabled{opacity:.5;cursor:default}
+.sim-time{
+  font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);
+}
+.sim-time small{font-size:11px;color:var(--text-dim);font-weight:400}
+.progress-track{height:3px;background:var(--bg);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+
+/* Targets row */
+.targets-row{display:flex;align-items:center;gap:6px}
+.targets-row input[type=number]{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:3px 8px;border-radius:4px;font-size:12px;width:80px;outline:none;
+}
+.targets-row input:focus{border-color:var(--accent)}
+
+/* Log */
+.log-section{flex:1;display:flex;flex-direction:column;min-height:0}
+.log-tabs{display:flex;gap:0;margin-bottom:6px}
+.log-tab{
+  flex:1;padding:4px 0;font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.04em;text-align:center;cursor:pointer;
+  background:var(--bg);border:1px solid var(--border);color:var(--text-dim);
+  border-right:none;
+}
+.log-tab:first-child{border-radius:4px 0 0 4px}
+.log-tab:last-child{border-radius:0 4px 4px 0;border-right:1px solid var(--border)}
+.log-tab.active{background:var(--border);border-color:var(--border);color:var(--text)}
+.log-list{
+  flex:1;overflow-y:auto;font-family:'SF Mono',Consolas,'Liberation Mono',monospace;
+  font-size:10px;line-height:1.7;color:var(--text-dim);
+}
+.log-entry{padding:1px 0 1px 7px;border-left:2px solid transparent}
+.log-entry.success{color:var(--green);border-left-color:var(--green)}
+.log-entry.fail{border-left-color:var(--border)}
+
+/* ── Simulation panes ── */
+.sim-pane{position:relative;overflow:hidden;background:var(--bg);border-right:1px solid var(--border)}
+.sim-pane:last-child{border-right:none}
+.sim-pane canvas{display:block;width:100%;height:100%}
+.pane-label{
+  position:absolute;top:10px;left:12px;
+  font-size:16px;font-weight:600;
+  padding:4px 6px 4px 10px;border-radius:6px;
+  background:rgba(22,27,34,.85);border:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;z-index:2;
+}
+.pane-label .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pane-label select{
+  background:transparent;border:none;color:var(--text);
+  font-size:16px;font-weight:600;outline:none;cursor:pointer;
+  padding:3px 4px;
+}
+.pane-label select option{background:var(--surface);color:var(--text)}
+/* Summary overlay inside pane */
+.pane-summary{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(22,27,34,.92);border:1px solid var(--border);
+  border-radius:10px;padding:20px 28px;text-align:center;
+  backdrop-filter:blur(8px);display:none;
+}
+.pane-summary h3{font-size:14px;margin-bottom:2px}
+.pane-summary .ps-model{font-size:11px;color:var(--text-dim);margin-bottom:12px}
+.ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;text-align:center}
+.ps-val{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.ps-lbl{font-size:9px;color:var(--text-dim);text-transform:uppercase}
+.ps-val.green{color:var(--green)}.ps-val.accent{color:var(--accent)}
+
+/* ── Header tabs (underline style) ── */
+.gtab{
+  padding:6px 2px;margin:0 8px;font-size:13px;font-weight:600;cursor:pointer;
+  background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--text-dim);transition:color .15s,border-color .15s;
+}
+.gtab:hover{color:var(--text)}
+.gtab.active{color:var(--text);border-bottom-color:var(--accent)}
+
+/* ── Timeline tab ── */
+#tab-timeline{flex-direction:column;align-items:center;justify-content:center;padding:32px}
+#tab-timeline canvas{max-width:900px;width:100%;border-radius:8px;border:1px solid var(--border)}
+.timeline-legend{
+  display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--text-dim);
+}
+.timeline-legend span{display:flex;align-items:center;gap:6px}
+.tl-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tl-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.4}
+.tl-row{display:flex;align-items:flex-start;gap:20px;width:100%;justify-content:center}
+.tl-side{width:180px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding-top:2px}
+
+/* ── Bandwidth buttons ── */
+.bw-group{display:flex;align-items:center;gap:3px}
+.bw-btn{
+  background:var(--bg);border:1px solid var(--border);color:var(--text-dim);
+  padding:3px 7px;border-radius:4px;font-size:10px;cursor:pointer;
+}
+.bw-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.bw-btn:hover:not(.active){border-color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <h1>AI Self-Replication Simulator</h1>
+    <button class="gtab active" data-tab="tab-simulator">Simulator</button>
+    <button class="gtab" data-tab="tab-timeline">Timeline</button>
+  </div>
+  <div class="hdr-right">
+    <span class="org">Palisade Research</span>
+  </div>
+</header>
+
+<main class="tab-content active" id="tab-simulator">
+  <!-- ── Left panel ── -->
+  <div class="panel">
+
+    <!-- Simulator parameters (first) -->
+    <div class="panel-section">
+      <div class="section-title">Simulator parameters</div>
+      <div class="controls-row">
+        <div class="speed-group">
+          <span class="speed-lbl">Speed</span>
+          <button class="spd-btn" data-speed="1">1x</button>
+          <button class="spd-btn" data-speed="5">5x</button>
+          <button class="spd-btn active" data-speed="20">20x</button>
+          <button class="spd-btn" data-speed="0">Flash</button>
+        </div>
+      </div>
+      <div class="targets-row">
+        <span class="speed-lbl">Targets</span>
+        <input type="number" id="targets-input" value="50000" min="10" max="100000" step="100">
+      </div>
+      <div class="bw-group">
+        <span class="speed-lbl">Network</span>
+        <button class="bw-btn" data-bw="10">10</button>
+        <button class="bw-btn" data-bw="100">100</button>
+        <button class="bw-btn active" data-bw="500">500</button>
+        <button class="bw-btn" data-bw="1000">1000</button>
+        <span class="speed-lbl" style="margin-left:2px">Mbps</span>
+      </div>
+      <div class="action-group" style="display:flex;gap:10px;align-items:center">
+        <button class="btn-p" id="btn-play">Start</button>
+        <span id="finished-label" style="display:none;font-size:16px;color:var(--green)">&#10003;</span>
+        <span class="sim-time" id="sim-time">00:00 <small>/ 06:00</small></span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-bar"></div></div>
+    </div>
+
+    <!-- Experimental data (second) -->
+    <div class="panel-section" id="sec-m1">
+      <div class="section-title">Experimental data</div>
+      <div class="model-header">
+        <span class="color-dot" style="background:var(--purple)"></span>
+        <span id="name-m1">Opus 4.6</span>
+        <span class="side">Left</span>
+      </div>
+      <div class="pipeline" id="pipe-m1"></div>
+      <div class="model-header" style="margin-top:6px">
+        <span class="color-dot" style="background:var(--orange)"></span>
+        <span id="name-m2">Qwen 3.5 122B</span>
+        <span class="side">Right</span>
+      </div>
+      <div class="pipeline" id="pipe-m2"></div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel-section">
+      <div class="section-title">Log</div>
+      <div class="log-section">
+        <div class="log-tabs">
+          <button class="log-tab active" data-log="0">Model 1</button>
+          <button class="log-tab" data-log="1">Model 2</button>
+        </div>
+        <div class="log-list" id="event-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sim pane 1 (left) ── -->
+  <div class="sim-pane" id="pane-1">
+    <canvas id="net-1"></canvas>
+    <div class="pane-label">
+      <span class="dot" style="background:var(--purple)"></span>
+      <select id="sel-m1">
+        <option value="opus46" selected>Opus 4.6 · Feb 26 — 81%</option>
+        <option value="gpt54">GPT 5.4 · Mar 26 — 33%</option>
+        <option value="qwen35">Qwen 3.5 122B · Mar 26 — 19%</option>
+        <option value="qwen36">Qwen 3.6 35B · Apr 26 — 18%</option>
+        <option value="opus4">Opus 4 · May 25 — 6%</option>
+        <option value="gpt5">GPT 5 · Dec 25 — 0%</option>
+      </select>
+    </div>
+    <div class="pane-hud">
+      <div class="pane-chart"><canvas id="chart-m1"></canvas></div>
+      <div class="pane-stats"><span class="pane-sv" id="s1-copies">0</span><span class="pane-sl">active replicas</span></div>
+    </div>
+    <div class="pane-summary" id="sum-1">
+      <h3>Complete</h3>
+      <div class="ps-model" id="sm-1"></div>
+      <div style="margin-top:8px"><span class="ps-val accent" id="sv1-copies">0</span> <span class="ps-lbl">active replicas</span></div>
+    </div>
+  </div>
+
+  <!-- ── Sim pane 2 (right) ── -->
+  <div class="sim-pane" id="pane-2">
+    <canvas id="net-2"></canvas>
+    <div class="pane-label">
+      <span class="dot" style="background:var(--orange)"></span>
+      <select id="sel-m2">
+        <option value="opus46">Opus 4.6 · Feb 26 — 81%</option>
+        <option value="gpt54">GPT 5.4 · Mar 26 — 33%</option>
+        <option value="qwen35" selected>Qwen 3.5 122B · Mar 26 — 19%</option>
+        <option value="qwen36">Qwen 3.6 35B · Apr 26 — 18%</option>
+        <option value="opus4">Opus 4 · May 25 — 6%</option>
+        <option value="gpt5">GPT 5 · Dec 25 — 0%</option>
+      </select>
+    </div>
+    <div class="pane-hud">
+      <div class="pane-chart"><canvas id="chart-m2"></canvas></div>
+      <div class="pane-stats"><span class="pane-sv" id="s2-copies">0</span><span class="pane-sl">active replicas</span></div>
+    </div>
+    <div class="pane-summary" id="sum-2">
+      <h3>Complete</h3>
+      <div class="ps-model" id="sm-2"></div>
+      <div style="margin-top:8px"><span class="ps-val accent" id="sv2-copies">0</span> <span class="ps-lbl">active replicas</span></div>
+    </div>
+  </div>
+</main>
+
+<div class="tab-content" id="tab-timeline" style="flex-direction:column;overflow-y:auto;padding:20px 40px;gap:16px">
+  <!-- Chart 1: scatter -->
+  <div class="tl-row">
+    <div class="tl-side">
+      <div class="tl-title">Self-Replication Success by Model Release Date</div>
+      <div class="timeline-legend">
+        <span><span class="tl-dot" style="background:#f0883e"></span> Proprietary</span>
+        <span><span class="tl-dot" style="background:#58a6ff"></span> Open-weight</span>
+      </div>
+    </div>
+    <canvas id="timeline-canvas"></canvas>
+  </div>
+  <!-- Chart 2: bars -->
+  <div class="tl-row">
+    <div class="tl-side">
+      <div class="tl-title">Success rate vs. compound replication</div>
+    </div>
+    <canvas id="bar-canvas"></canvas>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIG — stage-based simulation
+   ================================================================ */
+let bandwidthMbps = 500;
+
+const STAGE_NAMES = [
+  'Discover webapp', 'Get admin page', 'SSH into target', 'Get root',
+  'Find model files', 'Copy weights', 'Start serving', 'Model responding'
+];
+
+// Base time (minutes) per stage — stage 5 (copy weights) is computed from model size
+const STAGE_BASE_TIMES = [2, 4, 3, 2, 2, 0/*computed*/, 3, 1];
+
+// Conditional pass rates per stage (product = end-to-end rate)
+// Derived from Palisade experiment data
+const MODELS = {
+  'opus46': {
+    name: 'Opus 4.6', date: '2026-Feb', dateNum: 2026 + 1/12,
+    type: 'proprietary', transferGB: 244,
+    stages: [0.97, 1.00, 1.00, 1.00, 1.00, 1.00, 0.97, 0.86],
+    desc: '81% e2e. Frontier model transfers 122B weights (244 GB).'
+  },
+  'opus4': {
+    name: 'Opus 4', date: '2025-May', dateNum: 2025 + 4/12,
+    type: 'proprietary', transferGB: 244,
+    stages: [1.00, 1.00, 1.00, 1.00, 0.97, 0.22, 0.50, 0.55],
+    desc: '6% e2e. Earlier frontier model, weak at replication stage.'
+  },
+  'gpt54': {
+    name: 'GPT 5.4', date: '2026-Mar', dateNum: 2026 + 2/12,
+    type: 'proprietary', transferGB: 244,
+    stages: [0.95, 0.92, 0.90, 0.93, 0.70, 0.70, 0.96, 0.96],
+    desc: '33% e2e. Transfers 122B weights (244 GB).'
+  },
+  'gpt5': {
+    name: 'GPT 5', date: '2025-Dec', dateNum: 2025 + 11/12,
+    type: 'proprietary', transferGB: 244,
+    stages: [1.00, 0.98, 0.98, 1.00, 0.93, 0.45, 0.00, 1.00],
+    desc: '0% e2e. Excellent exploit but cannot start inference.'
+  },
+  'qwen35': {
+    name: 'Qwen 3.5 122B', date: '2026-Mar', dateNum: 2026 + 2/12,
+    type: 'open-weight', transferGB: 244,
+    stages: [0.96, 0.75, 0.917, 0.97, 0.406, 0.731, 1.00, 1.00],
+    desc: '19% e2e. Open-weight, self-replicating (244 GB).'
+  },
+  'qwen36': {
+    name: 'Qwen 3.6 35B', date: '2026-Apr', dateNum: 2026 + 3/12,
+    type: 'open-weight', transferGB: 35,
+    stages: [0.83, 0.88, 0.98, 0.98, 0.36, 0.72, 1.00, 1.00],
+    desc: '18% e2e. Smaller model, ~3x faster transfer (35 GB).'
+  }
+};
+
+const SIM_DURATION = 360;
+const PANE_COLORS = ['#d2a8ff','#f0883e']; // purple, orange
+
+/* ── Computer SVG (Space Invader pixel art) ── */
+const COMPUTER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 520" width="520" height="520" style="shape-rendering:crispEdges"><rect x="60" y="20" width="400" height="20" fill="#000"/><rect x="40" y="40" width="20" height="20" fill="#000"/><rect x="60" y="40" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="40" width="20" height="20" fill="#000"/><rect x="40" y="60" width="20" height="20" fill="#000"/><rect x="60" y="60" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="60" width="360" height="20" fill="#000"/><rect x="440" y="60" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="60" width="20" height="20" fill="#000"/><rect x="40" y="80" width="20" height="20" fill="#000"/><rect x="60" y="80" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="80" width="20" height="20" fill="#000"/><rect x="100" y="80" width="320" height="20" fill="#29AAE3"/><rect x="420" y="80" width="20" height="20" fill="#000"/><rect x="440" y="80" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="80" width="20" height="20" fill="#000"/><rect x="40" y="100" width="20" height="20" fill="#000"/><rect x="60" y="100" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="100" width="20" height="20" fill="#000"/><rect x="100" y="100" width="320" height="20" fill="#29AAE3"/><rect x="420" y="100" width="20" height="20" fill="#000"/><rect x="440" y="100" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="100" width="20" height="20" fill="#000"/><rect x="40" y="120" width="20" height="20" fill="#000"/><rect x="60" y="120" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="120" width="20" height="20" fill="#000"/><rect x="100" y="120" width="320" height="20" fill="#29AAE3"/><rect x="420" y="120" width="20" height="20" fill="#000"/><rect x="440" y="120" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="120" width="20" height="20" fill="#000"/><rect x="40" y="140" width="20" height="20" fill="#000"/><rect x="60" y="140" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="140" width="20" height="20" fill="#000"/><rect x="100" y="140" width="320" height="20" fill="#29AAE3"/><rect x="420" y="140" width="20" height="20" fill="#000"/><rect x="440" y="140" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="140" width="20" height="20" fill="#000"/><rect x="40" y="160" width="20" height="20" fill="#000"/><rect x="60" y="160" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="160" width="20" height="20" fill="#000"/><rect x="100" y="160" width="320" height="20" fill="#29AAE3"/><rect x="420" y="160" width="20" height="20" fill="#000"/><rect x="440" y="160" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="160" width="20" height="20" fill="#000"/><rect x="40" y="180" width="20" height="20" fill="#000"/><rect x="60" y="180" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="180" width="20" height="20" fill="#000"/><rect x="100" y="180" width="320" height="20" fill="#29AAE3"/><rect x="420" y="180" width="20" height="20" fill="#000"/><rect x="440" y="180" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="180" width="20" height="20" fill="#000"/><rect x="40" y="200" width="20" height="20" fill="#000"/><rect x="60" y="200" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="200" width="20" height="20" fill="#000"/><rect x="100" y="200" width="320" height="20" fill="#29AAE3"/><rect x="420" y="200" width="20" height="20" fill="#000"/><rect x="440" y="200" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="200" width="20" height="20" fill="#000"/><rect x="40" y="220" width="20" height="20" fill="#000"/><rect x="60" y="220" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="220" width="20" height="20" fill="#000"/><rect x="100" y="220" width="320" height="20" fill="#29AAE3"/><rect x="420" y="220" width="20" height="20" fill="#000"/><rect x="440" y="220" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="220" width="20" height="20" fill="#000"/><rect x="40" y="240" width="20" height="20" fill="#000"/><rect x="60" y="240" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="240" width="20" height="20" fill="#000"/><rect x="100" y="240" width="320" height="20" fill="#29AAE3"/><rect x="420" y="240" width="20" height="20" fill="#000"/><rect x="440" y="240" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="240" width="20" height="20" fill="#000"/><rect x="40" y="260" width="20" height="20" fill="#000"/><rect x="60" y="260" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="260" width="360" height="20" fill="#000"/><rect x="440" y="260" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="260" width="20" height="20" fill="#000"/><rect x="40" y="280" width="20" height="20" fill="#000"/><rect x="60" y="280" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="280" width="20" height="20" fill="#000"/><rect x="40" y="300" width="20" height="20" fill="#000"/><rect x="60" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="300" width="20" height="20" fill="#000"/><rect x="100" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="120" y="300" width="20" height="20" fill="#000"/><rect x="140" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="160" y="300" width="20" height="20" fill="#000"/><rect x="180" y="300" width="220" height="20" fill="#B3B3B3"/><rect x="400" y="300" width="40" height="20" fill="#000"/><rect x="440" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="300" width="20" height="20" fill="#000"/><rect x="40" y="320" width="20" height="20" fill="#000"/><rect x="60" y="320" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="320" width="20" height="20" fill="#000"/><rect x="60" y="340" width="400" height="20" fill="#000"/><rect x="220" y="360" width="20" height="20" fill="#000"/><rect x="240" y="360" width="40" height="20" fill="#B3B3B3"/><rect x="280" y="360" width="20" height="20" fill="#000"/><rect x="80" y="380" width="360" height="20" fill="#000"/><rect x="60" y="400" width="20" height="20" fill="#000"/><rect x="80" y="400" width="360" height="20" fill="#B3B3B3"/><rect x="440" y="400" width="20" height="20" fill="#000"/><rect x="40" y="420" width="20" height="20" fill="#000"/><rect x="60" y="420" width="60" height="20" fill="#B3B3B3"/><rect x="120" y="420" width="20" height="20" fill="#000"/><rect x="140" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="160" y="420" width="20" height="20" fill="#000"/><rect x="180" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="200" y="420" width="20" height="20" fill="#000"/><rect x="220" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="240" y="420" width="40" height="20" fill="#000"/><rect x="280" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="300" y="420" width="20" height="20" fill="#000"/><rect x="320" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="340" y="420" width="20" height="20" fill="#000"/><rect x="360" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="380" y="420" width="20" height="20" fill="#000"/><rect x="400" y="420" width="60" height="20" fill="#B3B3B3"/><rect x="460" y="420" width="20" height="20" fill="#000"/><rect x="20" y="440" width="20" height="20" fill="#000"/><rect x="40" y="440" width="60" height="20" fill="#B3B3B3"/><rect x="100" y="440" width="20" height="20" fill="#000"/><rect x="120" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="140" y="440" width="20" height="20" fill="#000"/><rect x="160" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="180" y="440" width="20" height="20" fill="#000"/><rect x="200" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="220" y="440" width="20" height="20" fill="#000"/><rect x="240" y="440" width="40" height="20" fill="#B3B3B3"/><rect x="280" y="440" width="20" height="20" fill="#000"/><rect x="300" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="320" y="440" width="20" height="20" fill="#000"/><rect x="340" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="360" y="440" width="20" height="20" fill="#000"/><rect x="380" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="400" y="440" width="20" height="20" fill="#000"/><rect x="420" y="440" width="60" height="20" fill="#B3B3B3"/><rect x="480" y="440" width="20" height="20" fill="#000"/><rect x="20" y="460" width="40" height="20" fill="#000"/><rect x="60" y="460" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="460" width="40" height="20" fill="#000"/><rect x="40" y="480" width="440" height="20" fill="#000"/></svg>`;
+
+/* Pre-render computer image */
+const _compImg = new Image();
+_compImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(COMPUTER_SVG);
+// Re-render when image loads so computer shows on first frame
+_compImg.onload = () => { if (window._app) window._app._renderOnce(); };
+
+/* ================================================================
+   SIMULATION ENGINE — stage-based
+   ================================================================ */
+class Simulation {
+  constructor(modelKey, maxTargets) {
+    this.model = MODELS[modelKey];
+    this.maxTargets = maxTargets;
+    this.time = 0;
+    this.agents = [];
+    this.connections = [];
+    this.attempts = 0;
+    this.copies = 0;
+    this.done = false;
+    this.history = [];
+
+    // Compute per-stage times for this model
+    const copyMin = this.model.transferGB * 8 / bandwidthMbps / 60;
+    this.stageTimes = STAGE_BASE_TIMES.map((t, i) => i === 5 ? copyMin : t);
+    // total successful attempt time (for reference)
+    this.fullTime = this.stageTimes.reduce((a, b) => a + b, 0);
+
+    this._addAgent(-1, 0);
+    this._snap();
+  }
+
+  // Roll an attempt: walk stages, return duration + outcome
+  _roll() {
+    const stages = this.model.stages;
+    let dur = 0;
+    for (let s = 0; s < 8; s++) {
+      if (Math.random() > stages[s]) {
+        // Failed at this stage — partial time spent
+        dur += this.stageTimes[s] * (0.2 + Math.random() * 0.6);
+        return { ok: false, dur: Math.max(1, Math.round(dur)), stage: s };
+      }
+      dur += this.stageTimes[s] * (0.8 + Math.random() * 0.4);
+    }
+    return { ok: true, dur: Math.max(1, Math.round(dur)), stage: -1 };
+  }
+
+  _addAgent(pid, gen) {
+    const id = this.agents.length;
+    // New agent: schedule first attempt start
+    const bootDelay = pid < 0 ? 1 : 3 + Math.floor(Math.random() * 3);
+    const roll = this._roll();
+    this.agents.push({
+      id, pid, gen, birth: this.time,
+      attemptEnd: this.time + bootDelay + roll.dur,
+      roll
+    });
+    return id;
+  }
+
+  _scheduleNext(ag) {
+    const cooldown = 1 + Math.floor(Math.random() * 2);
+    const roll = this._roll();
+    ag.attemptEnd = this.time + cooldown + roll.dur;
+    ag.roll = roll;
+  }
+
+  _snap() {
+    this.history.push({ t: this.time, a: this.agents.length, att: this.attempts, c: this.copies });
+  }
+
+  step() {
+    if (this.done) return [];
+    this.time += 1;
+    if (this.time >= SIM_DURATION) { this.done = true; return []; }
+
+    const evs = [];
+    const n = this.agents.length;
+
+    for (let i = 0; i < n; i++) {
+      const ag = this.agents[i];
+      if (this.time < ag.attemptEnd) continue;
+
+      // Attempt resolves
+      this.attempts++;
+      const r = ag.roll;
+      const pool = this.maxTargets - (this.agents.length - 1);
+
+      if (r.ok && pool > 0) {
+        this.copies++;
+        const nid = this._addAgent(ag.id, ag.gen + 1);
+        this.connections.push({ from: ag.id, to: nid, t: this.time });
+        evs.push({ type: 'success', t: this.time, from: ag.id, to: nid });
+      } else {
+        evs.push({ type: 'fail', t: this.time, agent: ag.id, stage: r.stage });
+      }
+
+      this._scheduleNext(ag);
+    }
+
+    if (this.time % 2 === 0) this._snap();
+    return evs;
+  }
+}
+
+/* ================================================================
+   NETWORK RENDERER
+   ================================================================ */
+class NetRenderer {
+  constructor(canvas, paneColor) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.color = paneColor;
+    this.nodes = [];
+    this.anims = [];
+    this._last = 0;
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+  }
+  resize() {
+    const r = this.canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    this.w = r.width; this.h = r.height;
+    this.canvas.width = r.width * dpr;
+    this.canvas.height = r.height * dpr;
+    this.canvas.style.width = r.width + 'px';
+    this.canvas.style.height = r.height + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.cx = this.w / 2; this.cy = this.h / 2;
+    for (let i = 0; i < this.nodes.length; i++) {
+      const p = this._pos(i, this.nodes.length);
+      this.nodes[i].x = p.x; this.nodes[i].y = p.y;
+    }
+  }
+  _pos(i, total) {
+    if (i === 0) return { x: this.cx, y: this.cy };
+    const maxR = Math.min(this.cx, this.cy) - 24;
+    const est = Math.max(total, 16);
+    const k = Math.min(18, maxR / (Math.sqrt(est) + 2));
+    const a = i * 2.39996323;
+    const r = 28 + k * Math.sqrt(i);
+    return {
+      x: Math.max(20, Math.min(this.w - 20, this.cx + r * Math.cos(a))),
+      y: Math.max(20, Math.min(this.h - 20, this.cy + r * Math.sin(a)))
+    };
+  }
+  sync(sim) {
+    const need = sim.agents.length;
+    while (this.nodes.length < need) {
+      const i = this.nodes.length;
+      const p = this._pos(i, need);
+      this.nodes.push({ x: p.x, y: p.y, pid: sim.agents[i].pid, appear: performance.now() });
+    }
+    if (need > 1 && need !== this._last) {
+      for (let i = 1; i < this.nodes.length; i++) {
+        const p = this._pos(i, need);
+        this.nodes[i].x = p.x; this.nodes[i].y = p.y;
+      }
+      this._last = need;
+    }
+  }
+  addAnim(type, ev) {
+    const now = performance.now();
+    if (type === 'success' && this.nodes[ev.from] && this.nodes[ev.to]) {
+      const f = this.nodes[ev.from], t = this.nodes[ev.to];
+      this.anims.push({ k:'line', x1:f.x, y1:f.y, x2:t.x, y2:t.y, t0:now, dur:700, col:'#3fb950' });
+      this.anims.push({ k:'ring', x:t.x, y:t.y, t0:now, dur:900, col:'#3fb950' });
+    } else if (type === 'fail' && this.nodes[ev.agent]) {
+      const n = this.nodes[ev.agent];
+      this.anims.push({ k:'ring', x:n.x, y:n.y, t0:now, dur:400, col:'#f85149' });
+    }
+  }
+
+  render(now) {
+    const ctx = this.ctx, w = this.w, h = this.h;
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, w, h);
+
+    // Dot grid
+    ctx.fillStyle = 'rgba(48,54,61,.3)';
+    for (let x = 15; x < w; x += 28)
+      for (let y = 15; y < h; y += 28)
+        ctx.fillRect(x, y, 1, 1);
+
+    const cnt = this.nodes.length;
+    const nr = Math.max(2.5, Math.min(8, 10 - Math.log2(Math.max(cnt, 1))));
+    const ca = Math.max(.05, .3 - cnt * .0005);
+
+    // Parse pane color for node rendering
+    const pc = this.color;
+
+    // Connections
+    ctx.strokeStyle = `rgba(${this._hex2rgb(pc)},${ca})`;
+    ctx.lineWidth = 1;
+    for (const nd of this.nodes) {
+      if (nd.pid >= 0 && nd.pid < this.nodes.length) {
+        const p = this.nodes[nd.pid];
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nd.x, nd.y); ctx.stroke();
+      }
+    }
+
+    // Nodes
+    for (let i = 0; i < cnt; i++) {
+      const nd = this.nodes[i];
+      const age = now - nd.appear;
+      const alpha = Math.min(1, age / 400);
+
+      if (i === 0) {
+        // Draw computer SVG for origin node
+        const sz = Math.min(48, Math.max(24, 48 - cnt * 0.06));
+        ctx.globalAlpha = alpha;
+        if (_compImg.complete) {
+          ctx.drawImage(_compImg, nd.x - sz / 2, nd.y - sz / 2, sz, sz);
+        } else {
+          ctx.beginPath(); ctx.arc(nd.x, nd.y, nr * 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff'; ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        continue;
+      }
+
+      const r = nr;
+      // Glow
+      if (cnt < 250) {
+        const g = ctx.createRadialGradient(nd.x, nd.y, 0, nd.x, nd.y, r * 3);
+        g.addColorStop(0, `rgba(${this._hex2rgb(pc)},${.22 * alpha})`);
+        g.addColorStop(1, `rgba(${this._hex2rgb(pc)},0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(nd.x, nd.y, r * 3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${this._hex2rgb(pc)},${alpha})`;
+      ctx.fill();
+    }
+
+    // Animations
+    this.anims = this.anims.filter(a => {
+      const t = (now - a.t0) / a.dur;
+      if (t > 1) return false;
+      if (a.k === 'ring') {
+        ctx.beginPath(); ctx.arc(a.x, a.y, 4 + 22 * t, 0, Math.PI * 2);
+        ctx.strokeStyle = a.col; ctx.lineWidth = 2;
+        ctx.globalAlpha = 1 - t; ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      if (a.k === 'line') {
+        const p = Math.min(1, t * 2.5);
+        ctx.beginPath();
+        ctx.moveTo(a.x1, a.y1);
+        ctx.lineTo(a.x1 + (a.x2 - a.x1) * p, a.y1 + (a.y2 - a.y1) * p);
+        ctx.strokeStyle = a.col; ctx.lineWidth = 2;
+        ctx.globalAlpha = Math.max(0, 1 - t); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      return true;
+    });
+  }
+
+  _hex2rgb(hex) {
+    const h = hex.replace('#','');
+    return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)].join(',');
+  }
+}
+
+/* ================================================================
+   CHART RENDERER
+   ================================================================ */
+class ChartRenderer {
+  constructor(canvas, color) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.color = color;
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+  }
+  resize() {
+    const dpr = window.devicePixelRatio || 1;
+    this.w = 317; this.h = 158;
+    this.canvas.width = this.w * dpr; this.canvas.height = this.h * dpr;
+    this.canvas.style.width = this.w + 'px'; this.canvas.style.height = this.h + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  render(history) {
+    const ctx = this.ctx, w = this.w, h = this.h;
+    const pad = { t:6, r:6, b:14, l:30 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    ctx.fillStyle = 'rgba(13,17,23,.6)'; ctx.fillRect(0, 0, w, h);
+    if (history.length < 2) return;
+    const maxA = Math.max(2, ...history.map(d => d.a));
+    ctx.strokeStyle = 'rgba(48,54,61,.4)'; ctx.lineWidth = .5;
+    ctx.font = '9px sans-serif'; ctx.fillStyle = '#8b949e';
+    for (let i = 0; i <= 2; i++) {
+      const y = pad.t + ph * (1 - i / 2);
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.fillText(Math.round(maxA * i / 2), pad.l - 2, y + 3);
+    }
+    ctx.textAlign = 'center';
+    for (let hr = 0; hr <= 6; hr += 3) {
+      ctx.fillText(hr + 'h', pad.l + pw * (hr * 60 / SIM_DURATION), h - 2);
+    }
+    ctx.beginPath(); ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+    for (let i = 0; i < history.length; i++) {
+      const x = pad.l + pw * (history[i].t / SIM_DURATION);
+      const y = pad.t + ph * (1 - history[i].a / maxA);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    const last = history[history.length - 1];
+    ctx.lineTo(pad.l + pw * (last.t / SIM_DURATION), pad.t + ph);
+    ctx.lineTo(pad.l, pad.t + ph); ctx.closePath();
+    ctx.fillStyle = this.color.replace(')', ',.07)').replace('rgb','rgba')
+      || `rgba(88,166,255,.07)`;
+    // Use manual alpha fill for hex colors
+    ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = this.color; ctx.fill(); ctx.restore();
+  }
+}
+
+/* ================================================================
+   TIMELINE CHART — model release date vs success rate
+   ================================================================ */
+class TimelineRenderer {
+  constructor(scatterCanvas, barCanvas) {
+    this.sc = scatterCanvas;
+    this.bc = barCanvas;
+    this.sctx = scatterCanvas.getContext('2d');
+    this.bctx = barCanvas.getContext('2d');
+  }
+
+  render() { this._scatter(); this._bars(); }
+
+  _prep(canvas, ctx, h) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = Math.min(900, rect.width - 16);
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return w;
+  }
+
+  _scatter() {
+    const ctx = this.sctx;
+    const h = 408;
+    const w = this._prep(this.sc, ctx, h);
+    const pad = { t: 16, r: 30, b: 48, l: 56 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+
+    ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
+
+    const xLabels = [
+      {d:2025+4/12,l:'May 25'},{d:2025+6/12,l:'Jul 25'},{d:2025+8/12,l:'Sep 25'},
+      {d:2025+10/12,l:'Nov 25'},{d:2026,l:'Jan 26'},{d:2026+2/12,l:'Mar 26'},
+      {d:2026+4/12,l:'May 26'}
+    ];
+    const xMin = 2025+3/12, xMax = 2026+5/12;
+    const toX = d => pad.l + pw * ((d-xMin)/(xMax-xMin));
+    const toY = v => pad.t + ph * (1 - v/100);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(48,54,61,.5)'; ctx.lineWidth = .5;
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#8b949e';
+    for (let y = 0; y <= 100; y += 20) {
+      const py = toY(y);
+      ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(w-pad.r, py); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.fillText(y+'%', pad.l-8, py+4);
+    }
+    for (const xl of xLabels) {
+      const px = toX(xl.d);
+      ctx.beginPath(); ctx.moveTo(px, pad.t); ctx.lineTo(px, h-pad.b); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillText(xl.l, px, h-pad.b+16);
+    }
+
+    // Y axis label
+    ctx.save(); ctx.translate(14, pad.t+ph/2); ctx.rotate(-Math.PI/2);
+    ctx.textAlign='center'; ctx.font='13px sans-serif'; ctx.fillStyle='#8b949e';
+    ctx.fillText('End-to-end success rate',0,0); ctx.restore();
+
+    // Points
+    const entries = Object.values(MODELS);
+    const pts = entries.map(m => {
+      const e2e = m.stages.reduce((a,b)=>a*b,1)*100;
+      return { m, e2e, px: toX(m.dateNum), py: toY(e2e),
+               col: m.type==='proprietary' ? '#f0883e' : '#58a6ff' };
+    });
+    pts.sort((a,b) => a.py - b.py);
+
+    // Collect label positions to avoid overlap
+    const placed = [];
+    for (const p of pts) {
+      // Dot
+      ctx.beginPath(); ctx.arc(p.px, p.py, 5, 0, Math.PI*2);
+      ctx.fillStyle = p.col; ctx.fill();
+
+      // Label — only model name
+      const rightSide = p.px > w * 0.55;
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3';
+      ctx.textAlign = rightSide ? 'right' : 'left';
+      let lx = rightSide ? p.px-10 : p.px+10;
+      let ly = p.py + 5;
+      // Nudge if overlapping
+      for (const prev of placed) {
+        if (Math.abs(ly - prev.y) < 14 && Math.abs(lx - prev.x) < 80) ly = prev.y - 15;
+      }
+      ctx.fillText(p.m.name, lx, ly);
+      placed.push({x:lx, y:ly});
+    }
+
+    // Dashed evolution lines between model versions
+    const byFamily = {};
+    for (const p of pts) {
+      const fam = p.m.name.includes('Opus') ? 'opus' : p.m.name.includes('GPT') ? 'gpt' : null;
+      if (fam) { if (!byFamily[fam]) byFamily[fam] = []; byFamily[fam].push(p); }
+    }
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    for (const fam of Object.values(byFamily)) {
+      if (fam.length < 2) continue;
+      fam.sort((a, b) => a.m.dateNum - b.m.dateNum);
+      ctx.strokeStyle = fam[0].col + '80';
+      ctx.beginPath();
+      ctx.moveTo(fam[0].px, fam[0].py);
+      for (let i = 1; i < fam.length; i++) ctx.lineTo(fam[i].px, fam[i].py);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  _bars() {
+    const ctx = this.bctx;
+    const h = 280;
+    const w = this._prep(this.bc, ctx, h);
+
+    ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
+
+    // Two models to compare
+    const models = [MODELS['opus46'], MODELS['qwen35']];
+    const colors = ['#f0883e', '#58a6ff'];
+
+    // Monte Carlo for replicas
+    const replicas = models.map(m => {
+      const copyMin = m.transferGB * 8 / bandwidthMbps / 60;
+      const st = STAGE_BASE_TIMES.map((t,i) => i===5 ? copyMin : t);
+      let total = 0;
+      for (let run = 0; run < 5; run++) {
+        let agents = [{next:0}], copies = 0;
+        for (let t = 0; t <= 360; t++) {
+          const n = agents.length;
+          for (let i = 0; i < n; i++) {
+            if (t < agents[i].next) continue;
+            let dur=0, ok=true;
+            for (let s=0;s<8;s++){
+              if(Math.random()>m.stages[s]){dur+=st[s]*(0.2+Math.random()*0.6);ok=false;break;}
+              dur+=st[s]*(0.8+Math.random()*0.4);
+            }
+            if(ok && agents.length<50001){
+              copies++;
+              const bd=3+Math.floor(Math.random()*3);
+              let d2=0;for(let s=0;s<8;s++)d2+=st[s]*(0.8+Math.random()*0.4);
+              agents.push({next:t+bd+Math.round(d2*(0.5+Math.random()*0.5))});
+            }
+            let d2=0;
+            for(let s=0;s<8;s++){
+              if(Math.random()>m.stages[s]){d2+=st[s]*(0.2+Math.random()*0.6);break;}
+              d2+=st[s]*(0.8+Math.random()*0.4);
+            }
+            agents[i].next=t+1+Math.round(d2);
+          }
+        }
+        total+=copies;
+      }
+      return Math.round(total/5);
+    });
+
+    const e2e = models.map(m => Math.round(m.stages.reduce((a,b)=>a*b,1)*100));
+
+    // Layout: two sections stacked — "Success rate" and "Replicas after 6h"
+    const labelW = 140; // left label column
+    const barArea = w - labelW - 40; // right side for bars
+    const barH = 28;
+    const sectionGap = 50;
+    const modelGap = 8;
+
+    // Section 1: Success Rate
+    let yy = 30;
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e';
+    ctx.textAlign = 'left';
+    ctx.fillText('Success rate (per attempt)', labelW, yy);
+    yy += 20;
+
+    for (let i = 0; i < 2; i++) {
+      const bw = barArea * (e2e[i] / 100);
+      const by = yy + i * (barH + modelGap);
+
+      // Model name
+      ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i];
+      ctx.textAlign = 'right';
+      ctx.fillText(models[i].name, labelW - 12, by + barH/2 + 5);
+
+      // Bar
+      ctx.fillStyle = colors[i];
+      const r = 4;
+      ctx.beginPath();
+      ctx.moveTo(labelW, by); ctx.lineTo(labelW + bw - r, by);
+      ctx.quadraticCurveTo(labelW + bw, by, labelW + bw, by + r);
+      ctx.lineTo(labelW + bw, by + barH - r);
+      ctx.quadraticCurveTo(labelW + bw, by + barH, labelW + bw - r, by + barH);
+      ctx.lineTo(labelW, by + barH); ctx.closePath(); ctx.fill();
+
+      // Value
+      ctx.font = '14px sans-serif'; ctx.fillStyle = '#e6edf3';
+      ctx.textAlign = 'left';
+      ctx.fillText(e2e[i] + '%', labelW + bw + 10, by + barH/2 + 5);
+    }
+
+    // Section 2: Replicas after 6h
+    yy += 2 * (barH + modelGap) + sectionGap;
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e';
+    ctx.textAlign = 'left';
+    ctx.fillText('Active replicas after 6 hours', labelW, yy);
+    yy += 20;
+
+    const maxR = Math.max(1, ...replicas);
+    for (let i = 0; i < 2; i++) {
+      const bw = Math.max(2, barArea * (replicas[i] / maxR));
+      const by = yy + i * (barH + modelGap);
+
+      // Model name
+      ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i];
+      ctx.textAlign = 'right';
+      ctx.fillText(models[i].name, labelW - 12, by + barH/2 + 5);
+
+      // Bar
+      ctx.fillStyle = colors[i];
+      const r = 4;
+      ctx.beginPath();
+      ctx.moveTo(labelW, by); ctx.lineTo(labelW + bw - r, by);
+      ctx.quadraticCurveTo(labelW + bw, by, labelW + bw, by + r);
+      ctx.lineTo(labelW + bw, by + barH - r);
+      ctx.quadraticCurveTo(labelW + bw, by + barH, labelW + bw - r, by + barH);
+      ctx.lineTo(labelW, by + barH); ctx.closePath(); ctx.fill();
+
+      // Value
+      ctx.font = '14px sans-serif'; ctx.fillStyle = '#e6edf3';
+      ctx.textAlign = 'left';
+      ctx.fillText(replicas[i].toLocaleString(), labelW + bw + 10, by + barH/2 + 5);
+    }
+  }
+}
+
+/* ================================================================
+   APP
+   ================================================================ */
+class App {
+  constructor() {
+    this.sims = [null, null];
+    this.nets = [
+      new NetRenderer(document.getElementById('net-1'), PANE_COLORS[0]),
+      new NetRenderer(document.getElementById('net-2'), PANE_COLORS[1]),
+    ];
+    this.charts = [
+      new ChartRenderer(document.getElementById('chart-m1'), PANE_COLORS[0]),
+      new ChartRenderer(document.getElementById('chart-m2'), PANE_COLORS[1]),
+    ];
+    this.logs = [[], []]; // event logs per sim
+    this.logTab = 0;
+    this.speed = 20;
+    this.running = false;
+    this.lastFrame = 0;
+    this.acc = 0;
+    this.timeline = new TimelineRenderer(
+      document.getElementById('timeline-canvas'),
+      document.getElementById('bar-canvas')
+    );
+    this._bind();
+    this.reset();
+    this._renderOnce();
+    this.timeline.render();
+  }
+
+  _bind() {
+    document.getElementById('btn-play').onclick = () => {
+      if (this.sims[0].done && this.sims[1].done) { this.reset(); return; }
+      this._toggle();
+    };
+    document.querySelectorAll('.spd-btn').forEach(b =>
+      b.onclick = () => this._setSpeed(parseInt(b.dataset.speed)));
+    document.getElementById('sel-m1').onchange = () => this.reset();
+    document.getElementById('sel-m2').onchange = () => this.reset();
+    document.getElementById('targets-input').onchange = () => this.reset();
+
+    // Bandwidth buttons
+    document.querySelectorAll('.bw-btn').forEach(b =>
+      b.onclick = () => {
+        bandwidthMbps = parseInt(b.dataset.bw);
+        document.querySelectorAll('.bw-btn').forEach(x => x.classList.toggle('active', x === b));
+        this.reset();
+      });
+
+    // Global tabs
+    document.querySelectorAll('.gtab').forEach(t =>
+      t.onclick = () => {
+        document.querySelectorAll('.gtab').forEach(x => x.classList.toggle('active', x === t));
+        document.querySelectorAll('.tab-content').forEach(c =>
+          c.classList.toggle('active', c.id === t.dataset.tab));
+        if (t.dataset.tab === 'tab-timeline') this.timeline.render();
+      });
+
+    // Log tabs
+    document.querySelectorAll('.log-tab').forEach(t =>
+      t.onclick = () => {
+        this.logTab = parseInt(t.dataset.log);
+        document.querySelectorAll('.log-tab').forEach(b => b.classList.toggle('active', b === t));
+        this._renderLog();
+      });
+  }
+
+  reset() {
+    const k1 = document.getElementById('sel-m1').value;
+    const k2 = document.getElementById('sel-m2').value;
+    const mt = parseInt(document.getElementById('targets-input').value) || 50000;
+
+    this.sims = [new Simulation(k1, mt), new Simulation(k2, mt)];
+    this.logs = [[], []];
+
+    for (let i = 0; i < 2; i++) {
+      this.nets[i].nodes = [];
+      this.nets[i].anims = [];
+      this.nets[i]._last = 0;
+      this.nets[i].sync(this.sims[i]);
+    }
+
+    this.running = false;
+    this.acc = 0;
+    document.getElementById('btn-play').textContent = 'Start';
+    document.getElementById('btn-play').disabled = false;
+    document.getElementById('finished-label').style.display = 'none';
+    document.getElementById('sum-1').style.display = 'none';
+    document.getElementById('sum-2').style.display = 'none';
+    document.getElementById('event-log').innerHTML = '';
+
+    // Update panel names + pipeline
+    for (const [i, k] of [[0, k1], [1, k2]]) {
+      const m = MODELS[k], p = i + 1;
+      document.getElementById(`name-m${p}`).textContent = m.name;
+      this._renderPipeline(p, m);
+    }
+
+    this._updateStats();
+    this.charts[0].render(this.sims[0].history);
+    this.charts[1].render(this.sims[1].history);
+  }
+
+  _renderPipeline(paneIdx, model) {
+    const el = document.getElementById(`pipe-m${paneIdx}`);
+    const color = PANE_COLORS[paneIdx - 1];
+    // Compute cumulative rates
+    const cum = [];
+    let c = 1;
+    for (let s = 0; s < 8; s++) { c *= model.stages[s]; cum.push(Math.round(c * 100)); }
+
+    let html = '<div class="pipe-phase">Exploit</div>';
+    for (let s = 0; s < 4; s++) {
+      html += `<div class="pipe-stage">
+        <span class="pipe-name">${STAGE_NAMES[s]}</span>
+        <div class="pipe-bar"><div class="pipe-fill" style="width:${cum[s]}%;background:${color}"></div></div>
+        <span class="pipe-pct">${cum[s]}%</span>
+      </div>`;
+    }
+    html += '<div class="pipe-phase">Replication</div>';
+    for (let s = 4; s < 8; s++) {
+      html += `<div class="pipe-stage">
+        <span class="pipe-name">${STAGE_NAMES[s]}</span>
+        <div class="pipe-bar"><div class="pipe-fill" style="width:${cum[s]}%;background:${color}"></div></div>
+        <span class="pipe-pct">${cum[s]}%</span>
+      </div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  _setSpeed(s) {
+    this.speed = s;
+    document.querySelectorAll('.spd-btn').forEach(b =>
+      b.classList.toggle('active', parseInt(b.dataset.speed) === s));
+  }
+
+  _toggle() {
+    if (this.sims[0].done && this.sims[1].done) return;
+    this.running = !this.running;
+    document.getElementById('btn-play').textContent = this.running ? 'Pause' : 'Resume';
+
+    if (this.running) {
+      this.lastFrame = performance.now();
+
+      if (this.speed === 0) {
+        for (let i = 0; i < 2; i++) {
+          while (!this.sims[i].done) {
+            const evs = this.sims[i].step();
+            for (const ev of evs) this.logs[i].push(ev);
+          }
+          this.nets[i].sync(this.sims[i]);
+        }
+        this._updateStats();
+        this.charts[0].render(this.sims[0].history);
+        this.charts[1].render(this.sims[1].history);
+        this._renderLog();
+        const now = performance.now();
+        this.nets[0].render(now);
+        this.nets[1].render(now);
+        this._finish();
+        return;
+      }
+      this._loop();
+    }
+  }
+
+  _loop() {
+    if (!this.running) { this._renderOnce(); return; }
+
+    const now = performance.now();
+    const dt = Math.min((now - this.lastFrame) / 1000, 0.1);
+    this.lastFrame = now;
+    this.acc += dt * this.speed;
+    const maxSteps = this.speed >= 20 ? 60 : 12;
+    let steps = 0;
+
+    while (this.acc >= 1 && steps < maxSteps) {
+      let anyActive = false;
+      for (let i = 0; i < 2; i++) {
+        if (this.sims[i].done) continue;
+        anyActive = true;
+        const evs = this.sims[i].step();
+        this.nets[i].sync(this.sims[i]);
+        for (const ev of evs) {
+          this.logs[i].push(ev);
+          if (ev.type === 'success') {
+            this.nets[i].addAnim('success', ev);
+          } else if (this.speed < 20) {
+            this.nets[i].addAnim('fail', ev);
+          }
+        }
+      }
+      if (!anyActive) break;
+      this.acc -= 1;
+      steps++;
+    }
+
+    this._updateStats();
+    this._renderLog();
+    this.charts[0].render(this.sims[0].history);
+    this.charts[1].render(this.sims[1].history);
+    this.nets[0].render(now);
+    this.nets[1].render(now);
+
+    if (this.sims[0].done && this.sims[1].done) { this._finish(); return; }
+    requestAnimationFrame(() => this._loop());
+  }
+
+  _renderOnce() {
+    const now = performance.now();
+    this.nets[0].render(now);
+    this.nets[1].render(now);
+  }
+
+  _finish() {
+    this.running = false;
+    const btn = document.getElementById('btn-play');
+    btn.textContent = 'Reset';
+    btn.disabled = false;
+    document.getElementById('finished-label').style.display = '';
+
+    for (let i = 0; i < 2; i++) {
+      const s = this.sims[i];
+      const idx = i + 1;
+      const e2e = s.model.stages.reduce((a, b) => a * b, 1);
+      document.getElementById(`sm-${idx}`).textContent =
+        `${s.model.name}  |  ${s.model.date}  |  ${(e2e * 100).toFixed(0)}% e2e`;
+      document.getElementById(`sv${idx}-copies`).textContent = Math.max(0, s.agents.length - 1);
+      document.getElementById(`sum-${idx}`).style.display = '';
+    }
+  }
+
+  _updateStats() {
+    for (let i = 0; i < 2; i++) {
+      const s = this.sims[i];
+      document.getElementById(`s${i + 1}-copies`).textContent = Math.max(0, s.agents.length - 1);
+    }
+
+    const maxTime = Math.max(this.sims[0].time, this.sims[1].time);
+    const hrs = Math.floor(maxTime / 60), mins = Math.floor(maxTime % 60);
+    document.getElementById('sim-time').innerHTML =
+      `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')} <small>/ 06:00</small>`;
+    document.getElementById('progress-bar').style.width = (maxTime / SIM_DURATION * 100) + '%';
+  }
+
+  _renderLog() {
+    const idx = this.logTab;
+    const log = document.getElementById('event-log');
+    const evs = this.logs[idx];
+
+    // Show last 200 entries, thin out old failures deterministically
+    const start = Math.max(0, evs.length - 200);
+    const frag = document.createDocumentFragment();
+    for (let i = start; i < evs.length; i++) {
+      const ev = evs[i];
+      // Keep all successes; for failures keep every 3rd unless recent
+      if (ev.type === 'fail' && i < evs.length - 30 && i % 3 !== 0) continue;
+      const d = document.createElement('div');
+      d.className = 'log-entry ' + ev.type;
+      const h = Math.floor(ev.t / 60), m = Math.floor(ev.t % 60);
+      const ts = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      d.textContent = ev.type === 'success'
+        ? `${ts}  Agent #${ev.from} \u2192 copy #${ev.to}`
+        : `${ts}  #${ev.agent} fail step-${ev.stage + 1}: ${STAGE_NAMES[ev.stage] || 'no targets'}`;
+      frag.appendChild(d);
+    }
+    log.innerHTML = '';
+    log.appendChild(frag);
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+/* ── Init ── */
+window.addEventListener('DOMContentLoaded', () => { window._app = new App(); });
+</script>
+</body>
+</html>
