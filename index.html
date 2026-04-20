@@ -896,20 +896,22 @@ class TimelineRenderer {
 
     // Layout: side-by-side — left 1/4 (success rate), right 3/4 (replicas)
     const nameW = 120;
+    const padR = 16; // right margin matching left name gap
     const gap = 30;
-    const leftW = (w - nameW - gap) * 0.25;
-    const rightW = (w - nameW - gap) * 0.75;
+    const avail = w - nameW - gap - padR;
+    const leftW = avail * 0.25;
+    const rightW = avail * 0.75;
     const leftX = nameW;
     const rightX = nameW + leftW + gap;
     const barH = 26;
     const modelGap = 10;
-    const topY = 40;
+    const topY = 44;
     const maxR = Math.max(1, ...replicas);
 
     // Headers
-    ctx.font = '12px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
-    ctx.fillText('Success rate', leftX, topY - 10);
-    ctx.fillText('Active replicas after 6h', rightX, topY - 10);
+    ctx.font = '14px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+    ctx.fillText('Success rate', leftX, topY - 12);
+    ctx.fillText('Active replicas after 6h', rightX, topY - 12);
 
     for (let i = 0; i < 2; i++) {
       const by = topY + i * (barH + modelGap);
