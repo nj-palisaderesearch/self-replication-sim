@@ -242,8 +242,8 @@ main.tab-content.active{display:grid}
       <div class="bw-group">
         <span class="speed-lbl">Network</span>
         <button class="bw-btn" data-bw="10">10</button>
-        <button class="bw-btn" data-bw="100">100</button>
-        <button class="bw-btn active" data-bw="500">500</button>
+        <button class="bw-btn active" data-bw="100">100</button>
+        <button class="bw-btn" data-bw="500">500</button>
         <button class="bw-btn" data-bw="1000">1000</button>
         <span class="speed-lbl" style="margin-left:2px">Mbps</span>
       </div>
@@ -361,7 +361,7 @@ main.tab-content.active{display:grid}
 /* ================================================================
    CONFIG — stage-based simulation
    ================================================================ */
-let bandwidthMbps = 500;
+let bandwidthMbps = 100;
 
 const STAGE_NAMES = [
   'Discover webapp', 'Get admin page', 'SSH into target', 'Get root',
@@ -702,7 +702,13 @@ class ChartRenderer {
     const pad = { t:6, r:6, b:14, l:30 };
     const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
     ctx.fillStyle = 'rgba(13,17,23,.6)'; ctx.fillRect(0, 0, w, h);
-    if (history.length < 2) return;
+    if (history.length < 2) {
+      ctx.font = '12px sans-serif'; ctx.fillStyle = '#30363d';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('Run simulation to see results', w/2, h/2);
+      ctx.textBaseline = 'alphabetic';
+      return;
+    }
     const maxA = Math.max(2, ...history.map(d => d.a));
     ctx.strokeStyle = 'rgba(48,54,61,.4)'; ctx.lineWidth = .5;
     ctx.font = '9px sans-serif'; ctx.fillStyle = '#8b949e';
@@ -844,14 +850,14 @@ class TimelineRenderer {
 
   _bars() {
     const ctx = this.bctx;
-    const h = 280;
+    const h = 220;
     const w = this._prep(this.bc, ctx, h);
 
     ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
 
-    // Two models to compare
     const models = [MODELS['opus46'], MODELS['qwen35']];
     const colors = ['#f0883e', '#58a6ff'];
+    const e2e = models.map(m => Math.round(m.stages.reduce((a,b)=>a*b,1)*100));
 
     // Monte Carlo for replicas
     const replicas = models.map(m => {
@@ -888,78 +894,77 @@ class TimelineRenderer {
       return Math.round(total/5);
     });
 
-    const e2e = models.map(m => Math.round(m.stages.reduce((a,b)=>a*b,1)*100));
-
-    // Layout: two sections stacked — "Success rate" and "Replicas after 6h"
-    const labelW = 140; // left label column
-    const barArea = w - labelW - 40; // right side for bars
-    const barH = 28;
-    const sectionGap = 50;
-    const modelGap = 8;
-
-    // Section 1: Success Rate
-    let yy = 30;
-    ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e';
-    ctx.textAlign = 'left';
-    ctx.fillText('Success rate (per attempt)', labelW, yy);
-    yy += 20;
-
-    for (let i = 0; i < 2; i++) {
-      const bw = barArea * (e2e[i] / 100);
-      const by = yy + i * (barH + modelGap);
-
-      // Model name
-      ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i];
-      ctx.textAlign = 'right';
-      ctx.fillText(models[i].name, labelW - 12, by + barH/2 + 5);
-
-      // Bar
-      ctx.fillStyle = colors[i];
-      const r = 4;
-      ctx.beginPath();
-      ctx.moveTo(labelW, by); ctx.lineTo(labelW + bw - r, by);
-      ctx.quadraticCurveTo(labelW + bw, by, labelW + bw, by + r);
-      ctx.lineTo(labelW + bw, by + barH - r);
-      ctx.quadraticCurveTo(labelW + bw, by + barH, labelW + bw - r, by + barH);
-      ctx.lineTo(labelW, by + barH); ctx.closePath(); ctx.fill();
-
-      // Value
-      ctx.font = '14px sans-serif'; ctx.fillStyle = '#e6edf3';
-      ctx.textAlign = 'left';
-      ctx.fillText(e2e[i] + '%', labelW + bw + 10, by + barH/2 + 5);
-    }
-
-    // Section 2: Replicas after 6h
-    yy += 2 * (barH + modelGap) + sectionGap;
-    ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e';
-    ctx.textAlign = 'left';
-    ctx.fillText('Active replicas after 6 hours', labelW, yy);
-    yy += 20;
-
+    // Layout: side-by-side — left 1/4 (success rate), right 3/4 (replicas)
+    const nameW = 120;
+    const gap = 30;
+    const leftW = (w - nameW - gap) * 0.25;
+    const rightW = (w - nameW - gap) * 0.75;
+    const leftX = nameW;
+    const rightX = nameW + leftW + gap;
+    const barH = 26;
+    const modelGap = 10;
+    const topY = 40;
     const maxR = Math.max(1, ...replicas);
+
+    // Headers
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+    ctx.fillText('Success rate', leftX, topY - 10);
+    ctx.fillText('Active replicas after 6h', rightX, topY - 10);
+
     for (let i = 0; i < 2; i++) {
-      const bw = Math.max(2, barArea * (replicas[i] / maxR));
-      const by = yy + i * (barH + modelGap);
+      const by = topY + i * (barH + modelGap);
+      const rad = 4;
 
       // Model name
       ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i];
       ctx.textAlign = 'right';
-      ctx.fillText(models[i].name, labelW - 12, by + barH/2 + 5);
+      ctx.fillText(models[i].name, nameW - 10, by + barH/2 + 5);
 
-      // Bar
+      // Left bar: success rate (scaled to 100%)
+      const bwL = Math.max(2, leftW * (e2e[i] / 100));
       ctx.fillStyle = colors[i];
-      const r = 4;
       ctx.beginPath();
-      ctx.moveTo(labelW, by); ctx.lineTo(labelW + bw - r, by);
-      ctx.quadraticCurveTo(labelW + bw, by, labelW + bw, by + r);
-      ctx.lineTo(labelW + bw, by + barH - r);
-      ctx.quadraticCurveTo(labelW + bw, by + barH, labelW + bw - r, by + barH);
-      ctx.lineTo(labelW, by + barH); ctx.closePath(); ctx.fill();
+      ctx.moveTo(leftX, by); ctx.lineTo(leftX + bwL - rad, by);
+      ctx.quadraticCurveTo(leftX + bwL, by, leftX + bwL, by + rad);
+      ctx.lineTo(leftX + bwL, by + barH - rad);
+      ctx.quadraticCurveTo(leftX + bwL, by + barH, leftX + bwL - rad, by + barH);
+      ctx.lineTo(leftX, by + barH); ctx.closePath(); ctx.fill();
 
-      // Value
-      ctx.font = '14px sans-serif'; ctx.fillStyle = '#e6edf3';
-      ctx.textAlign = 'left';
-      ctx.fillText(replicas[i].toLocaleString(), labelW + bw + 10, by + barH/2 + 5);
+      // Value inside or right of bar
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+      const valLX = leftX + bwL + 6;
+      if (valLX + 30 < rightX) {
+        ctx.fillText(e2e[i] + '%', valLX, by + barH/2 + 5);
+      } else {
+        // Put inside bar
+        ctx.textAlign = 'right';
+        ctx.fillText(e2e[i] + '%', leftX + bwL - 6, by + barH/2 + 5);
+      }
+
+      // Right bar: replicas (scaled to max)
+      const bwR = Math.max(2, rightW * (replicas[i] / maxR));
+      ctx.fillStyle = colors[i];
+      ctx.beginPath();
+      ctx.moveTo(rightX, by); ctx.lineTo(rightX + bwR - rad, by);
+      ctx.quadraticCurveTo(rightX + bwR, by, rightX + bwR, by + rad);
+      ctx.lineTo(rightX + bwR, by + barH - rad);
+      ctx.quadraticCurveTo(rightX + bwR, by + barH, rightX + bwR - rad, by + barH);
+      ctx.lineTo(rightX, by + barH); ctx.closePath(); ctx.fill();
+
+      // Value — ensure it fits inside canvas
+      const valStr = replicas[i].toLocaleString();
+      ctx.font = '13px sans-serif';
+      const valW = ctx.measureText(valStr).width;
+      const valRX = rightX + bwR + 6;
+      ctx.fillStyle = '#e6edf3';
+      if (valRX + valW + 4 < w) {
+        ctx.textAlign = 'left';
+        ctx.fillText(valStr, valRX, by + barH/2 + 5);
+      } else {
+        // Put inside bar
+        ctx.textAlign = 'right';
+        ctx.fillText(valStr, rightX + bwR - 6, by + barH/2 + 5);
+      }
     }
   }
 }
