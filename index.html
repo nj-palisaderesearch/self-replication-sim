@@ -252,7 +252,7 @@ main.tab-content.active{display:grid}
 
   /* Sim panes: stack */
   .sim-pane{
-    flex:1;min-height:38vh;
+    flex:1;min-height:34vh;
     border-right:none;border-bottom:1px solid var(--border);
   }
   .sim-pane:last-child{border-bottom:none}
@@ -1056,11 +1056,18 @@ class TimelineRenderer {
       for (let i = 0; i < 2; i++) {
         const bw = Math.max(2, barArea * (replicas[i] / maxR));
         drawBar(padL, yy, bw, barH, colors[i]);
-        ctx.font = '12px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+        ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
         const valStr = replicas[i].toLocaleString();
-        const valX = padL + bw + 8;
-        const fits = valX + ctx.measureText(`${models[i].name}  ${valStr}`).width < w - 4;
-        ctx.fillText(fits ? `${models[i].name}  ${valStr}` : valStr, valX, yy + barH/2 + 4);
+        const label = `${models[i].name}  ${valStr}`;
+        const labelW = ctx.measureText(label).width;
+        // If bar is wide enough, put label inside (white text)
+        if (bw > labelW + 16) {
+          ctx.fillStyle = '#e6edf3';
+          ctx.fillText(label, padL + 8, yy + barH/2 + 4);
+        } else {
+          ctx.fillStyle = '#e6edf3';
+          ctx.fillText(label, padL + bw + 8, yy + barH/2 + 4);
+        }
         yy += barH + modelGap;
       }
     } else {
@@ -1079,8 +1086,8 @@ class TimelineRenderer {
         const by = topY + i * (barH + modelGap);
         const cy = by + barH/2 + 5;
 
-        // Model name label (left of bars)
-        ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i]; ctx.textAlign = 'right';
+        // Model name label (left of bars) — white
+        ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'right';
         ctx.fillText(models[i].name, nameW - 10, cy);
 
         // Left bar: success rate
@@ -1089,18 +1096,16 @@ class TimelineRenderer {
         ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
         ctx.fillText(e2e[i] + '%', leftX + bwL + 6, cy);
 
-        // Right bar: replicas
+        // Right bar: replicas — value only (no repeated name)
         const bwR = Math.max(2, rightW * (replicas[i] / maxR));
         drawBar(rightX, by, bwR, barH, colors[i]);
         const valStr = replicas[i].toLocaleString();
         ctx.font = '13px sans-serif';
         const valW = ctx.measureText(valStr).width;
-        const nameInBar = models[i].name + '  ' + valStr;
-        const nameInBarW = ctx.measureText(nameInBar).width;
-        // If bar is long enough, put name + value inside
-        if (bwR > nameInBarW + 16) {
-          ctx.fillStyle = '#0d1117'; ctx.textAlign = 'left';
-          ctx.fillText(nameInBar, rightX + 8, cy);
+        // Put value inside bar if it fits, white text
+        if (bwR > valW + 16) {
+          ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+          ctx.fillText(valStr, rightX + 8, cy);
         } else if (rightX + bwR + 6 + valW + 4 < w) {
           ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
           ctx.fillText(valStr, rightX + bwR + 6, cy);
