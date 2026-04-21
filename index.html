@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>AI Self-Replication Simulator v4 — Palisade Research</title>
+<link rel="icon" href="favicon.ico">
+<title>AI Self-Replication Simulator — Palisade Research</title>
 <style>
 :root{
   --bg:#0d1117;--surface:#161b22;--border:#30363d;
@@ -25,6 +26,7 @@ header{
   padding:0 16px;flex-shrink:0;
 }
 header h1{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.hdr-logo{height:22px;width:auto}
 .org{font-size:12px;color:var(--text-dim)}
 .hdr-left{display:flex;align-items:center;gap:12px}
 .hdr-right{display:flex;gap:14px;align-items:center}
@@ -205,12 +207,101 @@ main.tab-content.active{display:grid}
 }
 .bw-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .bw-btn:hover:not(.active){border-color:var(--text-dim)}
+
+/* ══════════════════════════════════════════
+   MOBILE — below 900px
+   ══════════════════════════════════════════ */
+@media(max-width:900px){
+  /* Header */
+  header{height:44px;padding:0 10px}
+  header h1{font-size:13px}
+  .hdr-logo{height:18px}
+  .hdr-left{gap:8px}
+  .gtab{font-size:11px;padding:4px 1px;margin:0 5px}
+  .org{display:none}
+
+  /* Simulator tab: stack vertically */
+  main.tab-content.active{display:flex!important;flex-direction:column}
+
+  /* Panel: compact horizontal strip */
+  .panel{
+    flex-direction:row;flex-wrap:wrap;gap:0;
+    border-right:none;border-bottom:1px solid var(--border);
+    overflow:visible;max-height:none;padding:6px 10px;
+  }
+  .panel-section{
+    border-bottom:none;padding:4px 8px;gap:4px;
+    flex:1;min-width:140px;
+  }
+  .panel-section:last-child{flex-basis:100%}
+  .section-title{font-size:9px;margin-bottom:2px}
+  .model-header{font-size:11px;gap:4px}
+  .model-header .side{font-size:9px}
+  .pipeline{display:none} /* hide pipeline on mobile — too detailed */
+  .log-section{display:none} /* hide log on mobile */
+  .speed-lbl{font-size:8px}
+  .spd-btn,.bw-btn{padding:3px 6px;font-size:10px}
+  .btn-p{padding:6px 14px;font-size:12px}
+  .sim-time{font-size:13px}
+  .sim-time small{font-size:9px}
+  .controls-row{gap:4px}
+  .targets-row input[type=number]{width:64px;font-size:11px;padding:3px 6px}
+  .progress-track{margin-top:4px}
+
+  /* Sim panes: stack */
+  .sim-pane{
+    flex:1;min-height:38vh;
+    border-right:none;border-bottom:1px solid var(--border);
+  }
+  .sim-pane:last-child{border-bottom:none}
+
+  /* Pane label / dropdown */
+  .pane-label{top:6px;left:6px;font-size:12px;padding:2px 3px 2px 6px}
+  .pane-label select{font-size:12px;padding:2px 2px}
+  .pane-label .dot{width:7px;height:7px}
+
+  /* HUD: scale down */
+  .pane-hud{top:6px;right:6px;gap:3px}
+  .pane-chart{padding:3px}
+  .pane-chart canvas{width:200px!important;height:90px!important}
+  .pane-stats{padding:4px 10px;gap:4px}
+  .pane-sv{font-size:18px}
+  .pane-sl{font-size:8px}
+
+  /* Summary overlay */
+  .pane-summary{padding:14px 20px}
+  .pane-summary h3{font-size:12px}
+  .ps-val{font-size:20px}
+
+  /* Timeline tab */
+  .tl-row{flex-direction:column;gap:8px}
+  .tl-side{width:auto;gap:6px;padding-top:0}
+  .tl-title{font-size:13px}
+  .timeline-legend{flex-direction:row;gap:12px;font-size:11px}
+}
+
+/* Extra-small: below 480px */
+@media(max-width:480px){
+  header h1{font-size:11px}
+  .hdr-logo{height:16px}
+  .hdr-left{gap:5px}
+  .gtab{font-size:10px;margin:0 3px}
+
+  .panel{padding:4px 6px}
+  .panel-section{min-width:100px;padding:3px 4px}
+  .sim-pane{min-height:35vh}
+  .pane-label{font-size:11px}
+  .pane-label select{font-size:11px}
+  .pane-chart canvas{width:150px!important;height:70px!important}
+  .pane-sv{font-size:15px}
+}
 </style>
 </head>
 <body>
 
 <header>
   <div class="hdr-left">
+    <img src="logo.png" alt="Palisade" class="hdr-logo">
     <h1>AI Self-Replication Simulator</h1>
     <button class="gtab active" data-tab="tab-simulator">Simulator</button>
     <button class="gtab" data-tab="tab-timeline">Timeline</button>
@@ -693,9 +784,11 @@ class ChartRenderer {
   }
   resize() {
     const dpr = window.devicePixelRatio || 1;
-    this.w = 317; this.h = 158;
+    // Read actual CSS size (responsive via media queries)
+    const rect = this.canvas.getBoundingClientRect();
+    this.w = rect.width || 317;
+    this.h = rect.height || 158;
     this.canvas.width = this.w * dpr; this.canvas.height = this.h * dpr;
-    this.canvas.style.width = this.w + 'px'; this.canvas.style.height = this.h + 'px';
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   render(history) {
