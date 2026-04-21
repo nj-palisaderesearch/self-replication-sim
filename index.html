@@ -209,6 +209,27 @@ main.tab-content.active{display:grid}
 .bw-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .bw-btn:hover:not(.active){border-color:var(--text-dim)}
 
+/* Experimental data button + overlay (hidden on desktop, shown on mobile) */
+.exp-btn{
+  display:none;position:absolute;bottom:10px;left:10px;z-index:3;
+  background:rgba(22,27,34,.85);border:1px solid var(--border);
+  border-radius:5px;padding:4px 10px;color:var(--text-dim);
+  font-size:11px;cursor:pointer;
+}
+.exp-btn:hover{color:var(--text);border-color:var(--text-dim)}
+.exp-overlay{
+  display:none;position:absolute;inset:0;z-index:10;
+  background:rgba(13,17,23,.92);backdrop-filter:blur(6px);
+  padding:20px;overflow-y:auto;
+}
+.exp-overlay.show{display:block}
+.exp-overlay .exp-close{
+  position:absolute;top:10px;right:14px;
+  background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;
+}
+.exp-overlay .exp-close:hover{color:var(--text)}
+.exp-overlay .exp-title{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text)}
+
 /* ══════════════════════════════════════════
    MOBILE — below 900px
    ══════════════════════════════════════════ */
@@ -274,6 +295,13 @@ main.tab-content.active{display:grid}
   .pane-summary{padding:14px 20px}
   .pane-summary h3{font-size:12px}
   .ps-val{font-size:20px}
+
+  /* Experimental data button — mobile only */
+  .exp-btn{display:block!important}
+
+  /* Shrink panel more */
+  .panel-section.exp-section{display:none}
+  .panel{padding:4px 8px}
 
   /* Timeline tab */
   #tab-timeline{padding:10px 8px!important;gap:10px!important}
@@ -351,17 +379,17 @@ main.tab-content.active{display:grid}
       <div class="progress-track"><div class="progress-fill" id="progress-bar"></div></div>
     </div>
 
-    <!-- Experimental data (second) -->
-    <div class="panel-section" id="sec-m1">
+    <!-- Experimental data (second) — hidden on mobile via .exp-section -->
+    <div class="panel-section exp-section" id="sec-m1">
       <div class="section-title">Experimental data</div>
       <div class="model-header">
-        <span class="color-dot" style="background:var(--purple)"></span>
+        <span class="color-dot" id="dot-m1"></span>
         <span id="name-m1">Opus 4.6</span>
         <span class="side">Left</span>
       </div>
       <div class="pipeline" id="pipe-m1"></div>
       <div class="model-header" style="margin-top:6px">
-        <span class="color-dot" style="background:var(--orange)"></span>
+        <span class="color-dot" id="dot-m2"></span>
         <span id="name-m2">Qwen 3.5 122B</span>
         <span class="side">Right</span>
       </div>
@@ -399,6 +427,12 @@ main.tab-content.active{display:grid}
       <div class="pane-chart"><canvas id="chart-m1"></canvas></div>
       <div class="pane-stats"><span class="pane-sv" id="s1-copies">0</span><span class="pane-sl">active replicas</span></div>
     </div>
+    <button class="exp-btn" onclick="document.getElementById('exp-ov-1').classList.add('show')">Experimental data</button>
+    <div class="exp-overlay" id="exp-ov-1">
+      <button class="exp-close" onclick="this.parentElement.classList.remove('show')">&times;</button>
+      <div class="exp-title" id="exp-title-1">Opus 4.6</div>
+      <div class="pipeline" id="exp-pipe-1"></div>
+    </div>
     <div class="pane-summary" id="sum-1">
       <h3>Complete</h3>
       <div class="ps-model" id="sm-1"></div>
@@ -423,6 +457,12 @@ main.tab-content.active{display:grid}
     <div class="pane-hud">
       <div class="pane-chart"><canvas id="chart-m2"></canvas></div>
       <div class="pane-stats"><span class="pane-sv" id="s2-copies">0</span><span class="pane-sl">active replicas</span></div>
+    </div>
+    <button class="exp-btn" onclick="document.getElementById('exp-ov-2').classList.add('show')">Experimental data</button>
+    <div class="exp-overlay" id="exp-ov-2">
+      <button class="exp-close" onclick="this.parentElement.classList.remove('show')">&times;</button>
+      <div class="exp-title" id="exp-title-2">Qwen 3.5 122B</div>
+      <div class="pipeline" id="exp-pipe-2"></div>
     </div>
     <div class="pane-summary" id="sum-2">
       <h3>Complete</h3>
@@ -1214,14 +1254,16 @@ class App {
     document.getElementById('sum-2').style.display = 'none';
     document.getElementById('event-log').innerHTML = '';
 
-    // Update panel names + pipeline + colors
+    // Update panel names + pipeline + colors + mobile overlay
     for (const [i, k] of [[0, k1], [1, k2]]) {
       const m = MODELS[k], p = i + 1;
       document.getElementById(`name-m${p}`).textContent = m.name;
-      // Update panel dot color
-      const panelDot = document.querySelector(`#sec-m1 .model-header:nth-of-type(${i === 0 ? 1 : 2}) .color-dot`);
-      if (panelDot) panelDot.style.background = m.color;
+      document.getElementById(`dot-m${p}`).style.background = m.color;
       this._renderPipeline(p, m);
+      // Mobile overlay pipeline
+      document.getElementById(`exp-title-${p}`).textContent = m.name;
+      this._renderPipelineTo(`exp-pipe-${p}`, m);
+      document.getElementById(`exp-ov-${p}`).classList.remove('show');
     }
 
     this._updateStats();
@@ -1229,31 +1271,23 @@ class App {
     this.charts[1].render(this.sims[1].history);
   }
 
-  _renderPipeline(paneIdx, model) {
-    const el = document.getElementById(`pipe-m${paneIdx}`);
+  _pipelineHTML(model) {
     const color = model.color;
-    // Compute cumulative rates
-    const cum = [];
-    let c = 1;
+    const cum = []; let c = 1;
     for (let s = 0; s < 8; s++) { c *= model.stages[s]; cum.push(Math.round(c * 100)); }
-
     let html = '<div class="pipe-phase">Exploit</div>';
-    for (let s = 0; s < 4; s++) {
-      html += `<div class="pipe-stage">
-        <span class="pipe-name">${STAGE_NAMES[s]}</span>
-        <div class="pipe-bar"><div class="pipe-fill" style="width:${cum[s]}%;background:${color}"></div></div>
-        <span class="pipe-pct">${cum[s]}%</span>
-      </div>`;
-    }
+    for (let s = 0; s < 4; s++)
+      html += `<div class="pipe-stage"><span class="pipe-name">${STAGE_NAMES[s]}</span><div class="pipe-bar"><div class="pipe-fill" style="width:${cum[s]}%;background:${color}"></div></div><span class="pipe-pct">${cum[s]}%</span></div>`;
     html += '<div class="pipe-phase">Replication</div>';
-    for (let s = 4; s < 8; s++) {
-      html += `<div class="pipe-stage">
-        <span class="pipe-name">${STAGE_NAMES[s]}</span>
-        <div class="pipe-bar"><div class="pipe-fill" style="width:${cum[s]}%;background:${color}"></div></div>
-        <span class="pipe-pct">${cum[s]}%</span>
-      </div>`;
-    }
-    el.innerHTML = html;
+    for (let s = 4; s < 8; s++)
+      html += `<div class="pipe-stage"><span class="pipe-name">${STAGE_NAMES[s]}</span><div class="pipe-bar"><div class="pipe-fill" style="width:${cum[s]}%;background:${color}"></div></div><span class="pipe-pct">${cum[s]}%</span></div>`;
+    return html;
+  }
+  _renderPipeline(paneIdx, model) {
+    document.getElementById(`pipe-m${paneIdx}`).innerHTML = this._pipelineHTML(model);
+  }
+  _renderPipelineTo(elId, model) {
+    document.getElementById(elId).innerHTML = this._pipelineHTML(model);
   }
 
   _setSpeed(s) {
@@ -1399,7 +1433,13 @@ class App {
 }
 
 /* ── Init ── */
-window.addEventListener('DOMContentLoaded', () => { window._app = new App(); });
+window.addEventListener('DOMContentLoaded', () => {
+  window._app = new App();
+  // Close exp overlays on tap outside content
+  document.querySelectorAll('.exp-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
+  });
+});
 </script>
 </body>
 </html>
