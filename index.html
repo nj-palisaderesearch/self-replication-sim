@@ -548,6 +548,13 @@ const MODELS = {
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
     stages: [0.83, 0.88, 0.98, 0.98, 0.36, 0.72, 1.00, 1.00],
     desc: '18% e2e. Smaller model, ~3x faster transfer (35 GB).'
+  },
+  'qwen35s': {
+    name: 'Qwen 3.5 35B', date: '2026-Mar', dateNum: 2026 + 2/12,
+    type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
+    stages: [0.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
+    desc: '0% e2e. Could not discover webapp.',
+    timelineOnly: true // not in simulator dropdowns
   }
 };
 
@@ -992,7 +999,10 @@ class TimelineRenderer {
     // Dashed evolution lines between model versions
     const byFamily = {};
     for (const p of pts) {
-      const fam = p.m.name.includes('Opus') ? 'opus' : p.m.name.includes('GPT') ? 'gpt' : null;
+      let fam = null;
+      if (p.m.name.includes('Opus')) fam = 'opus';
+      else if (p.m.name.includes('GPT')) fam = 'gpt';
+      else if (p.m.name.includes('35B')) fam = 'qwen35b';
       if (fam) { if (!byFamily[fam]) byFamily[fam] = []; byFamily[fam].push(p); }
     }
     ctx.setLineDash([4, 4]);
