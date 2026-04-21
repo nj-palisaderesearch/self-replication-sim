@@ -26,10 +26,12 @@ header{
   padding:0 16px;flex-shrink:0;
 }
 header h1{font-size:15px;font-weight:600;letter-spacing:-.02em}
-.hdr-logo{height:22px;width:auto}
-.org{font-size:12px;color:var(--text-dim)}
-.hdr-left{display:flex;align-items:center;gap:12px}
-.hdr-right{display:flex;gap:14px;align-items:center}
+.hdr-logo{height:22px;width:auto;margin-bottom:-2px}
+.org{font-size:15px;color:var(--text-dim);text-decoration:none;font-weight:500}
+.org:hover{color:var(--text)}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.hdr-left .hdr-logo{align-self:center}
+.hdr-right{display:flex;gap:14px;align-items:baseline}
 .hdr-note{font-size:11px;color:var(--text-dim);font-style:italic}
 .hdr-right label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
 .hdr-right input[type=number]{
@@ -219,6 +221,7 @@ main.tab-content.active{display:grid}
   .hdr-left{gap:8px}
   .gtab{font-size:11px;padding:4px 1px;margin:0 5px}
   .org{display:none}
+  .hdr-right{align-items:center}
 
   /* Simulator tab: stack vertically */
   main.tab-content.active{display:flex!important;flex-direction:column}
@@ -304,12 +307,12 @@ main.tab-content.active{display:grid}
 <header>
   <div class="hdr-left">
     <img src="logo.png" alt="Palisade" class="hdr-logo">
-    <h1>AI Self-Replication Simulator</h1>
+    <h1>AI Self-Replication</h1>
     <button class="gtab active" data-tab="tab-simulator">Simulator</button>
     <button class="gtab" data-tab="tab-timeline">Timeline</button>
   </div>
   <div class="hdr-right">
-    <span class="org">Palisade Research</span>
+    <a href="https://palisaderesearch.org" target="_blank" class="org">Palisade Research</a>
   </div>
 </header>
 
@@ -806,7 +809,7 @@ class ChartRenderer {
     const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
     ctx.fillStyle = 'rgba(13,17,23,.6)'; ctx.fillRect(0, 0, w, h);
     if (history.length < 2) {
-      ctx.font = '12px sans-serif'; ctx.fillStyle = '#30363d';
+      ctx.font = '12px sans-serif'; ctx.fillStyle = '#6e7681';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('Run simulation to see results', w/2, h/2);
       ctx.textBaseline = 'alphabetic';
@@ -869,15 +872,15 @@ class TimelineRenderer {
     const isMobile = window.innerWidth < 900;
     const h = isMobile ? 320 : 408;
     const w = this._prep(this.sc, ctx, h);
-    const pad = { t: 16, r: 30, b: 48, l: 56 };
+    const pad = { t: 16, r: 30, b: 58, l: 56 };
     const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
 
     ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
 
     const xLabels = [
-      {d:2025+4/12,l:'May 25'},{d:2025+6/12,l:'Jul 25'},{d:2025+8/12,l:'Sep 25'},
-      {d:2025+10/12,l:'Nov 25'},{d:2026,l:'Jan 26'},{d:2026+2/12,l:'Mar 26'},
-      {d:2026+4/12,l:'May 26'}
+      {d:2025+4/12,m:'May',y:'2025'},{d:2025+6/12,m:'Jul',y:'2025'},{d:2025+8/12,m:'Sep',y:'2025'},
+      {d:2025+10/12,m:'Nov',y:'2025'},{d:2026,m:'Jan',y:'2026'},{d:2026+2/12,m:'Mar',y:'2026'},
+      {d:2026+4/12,m:'May',y:'2026'}
     ];
     const xMin = 2025+3/12, xMax = 2026+5/12;
     const toX = d => pad.l + pw * ((d-xMin)/(xMax-xMin));
@@ -894,7 +897,9 @@ class TimelineRenderer {
     for (const xl of xLabels) {
       const px = toX(xl.d);
       ctx.beginPath(); ctx.moveTo(px, pad.t); ctx.lineTo(px, h-pad.b); ctx.stroke();
-      ctx.textAlign = 'center'; ctx.fillText(xl.l, px, h-pad.b+16);
+      ctx.textAlign = 'center';
+      ctx.fillText(xl.m, px, h-pad.b+14);
+      ctx.fillText(xl.y, px, h-pad.b+26);
     }
 
     // Y axis label
@@ -1022,24 +1027,25 @@ class TimelineRenderer {
     };
 
     if (mobile) {
-      // MOBILE: stacked — success rate pair, then replicas pair
-      const padL = 10, padR = 10;
-      const barArea = w - padL - padR;
-      const barH = 22, modelGap = 6, sectionGap = 32;
+      // MOBILE: stacked — success rate pair (1/4 width), then replicas pair (full width)
+      const padL = 10, padRt = 10;
+      const barArea = w - padL - padRt;
+      const rateArea = barArea * 0.25; // 1/4 for rates (same ratio as desktop)
+      const barH = 22, modelGap = 6, sectionGap = 28;
       let yy = 20;
 
       // Section 1: Success rate
       ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
       ctx.fillText('Success rate', padL, yy); yy += 18;
       for (let i = 0; i < 2; i++) {
-        const bw = Math.max(2, barArea * (e2e[i] / 100));
+        const bw = Math.max(2, rateArea * (e2e[i] / 100));
         drawBar(padL, yy, bw, barH, colors[i]);
         ctx.font = '12px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
         ctx.fillText(`${models[i].name}  ${e2e[i]}%`, padL + bw + 8, yy + barH/2 + 4);
         yy += barH + modelGap;
       }
 
-      // Section 2: Replicas
+      // Section 2: Replicas (full bar area)
       yy += sectionGap - modelGap;
       ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
       ctx.fillText('Active replicas after 6h', padL, yy); yy += 18;
