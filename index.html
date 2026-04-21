@@ -10,7 +10,7 @@
 :root{
   --bg:#0d1117;--surface:#161b22;--border:#30363d;
   --text:#e6edf3;--text-dim:#8b949e;--accent:#58a6ff;
-  --green:#3fb950;--red:#f85149;--orange:#f0883e;--purple:#d2a8ff;
+  --green:#3fb950;--red:#f85149;--orange:#f0883e;--purple:#5B43D4;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -26,12 +26,11 @@ header{
   padding:0 16px;flex-shrink:0;
 }
 header h1{font-size:15px;font-weight:600;letter-spacing:-.02em}
-.hdr-logo{height:22px;width:auto;margin-bottom:-2px}
+.hdr-logo{height:20px;width:auto;vertical-align:middle;margin-bottom:2px}
 .org{font-size:15px;color:var(--text-dim);text-decoration:none;font-weight:500}
 .org:hover{color:var(--text)}
 .hdr-left{display:flex;align-items:baseline;gap:12px}
-.hdr-left .hdr-logo{align-self:center}
-.hdr-right{display:flex;gap:14px;align-items:baseline}
+.hdr-right{display:flex;gap:8px;align-items:center}
 .hdr-note{font-size:11px;color:var(--text-dim);font-style:italic}
 .hdr-right label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
 .hdr-right input[type=number]{
@@ -217,11 +216,11 @@ main.tab-content.active{display:grid}
   /* Header */
   header{height:44px;padding:0 10px}
   header h1{font-size:13px}
-  .hdr-logo{height:18px}
+  .hdr-logo{height:16px}
   .hdr-left{gap:8px}
   .gtab{font-size:11px;padding:4px 1px;margin:0 5px}
   .org{display:none}
-  .hdr-right{align-items:center}
+  .hdr-right{gap:6px}
 
   /* Simulator tab: stack vertically */
   main.tab-content.active{display:flex!important;flex-direction:column}
@@ -306,12 +305,12 @@ main.tab-content.active{display:grid}
 
 <header>
   <div class="hdr-left">
-    <img src="logo.png" alt="Palisade" class="hdr-logo">
     <h1>AI Self-Replication</h1>
     <button class="gtab active" data-tab="tab-simulator">Simulator</button>
     <button class="gtab" data-tab="tab-timeline">Timeline</button>
   </div>
   <div class="hdr-right">
+    <img src="logo.png" alt="Palisade" class="hdr-logo">
     <a href="https://palisaderesearch.org" target="_blank" class="org">Palisade Research</a>
   </div>
 </header>
@@ -471,7 +470,7 @@ const STAGE_BASE_TIMES = [2, 4, 3, 2, 2, 0/*computed*/, 3, 1];
 // Conditional pass rates per stage (product = end-to-end rate)
 // Derived from Palisade experiment data
 // Per-company colors: Anthropic=orange, OpenAI=gray, Qwen=purple
-const MODEL_COLORS = { anthropic:'#f0883e', openai:'#6e7681', qwen:'#d2a8ff' };
+const MODEL_COLORS = { anthropic:'#f0883e', openai:'#4a7a5b', qwen:'#5B43D4' };
 
 const MODELS = {
   'opus46': {
@@ -811,7 +810,12 @@ class ChartRenderer {
     if (history.length < 2) {
       ctx.font = '12px sans-serif'; ctx.fillStyle = '#6e7681';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('Run simulation to see results', w/2, h/2);
+      if (w < 220) {
+        ctx.fillText('Run simulation', w/2, h/2 - 8);
+        ctx.fillText('to see results', w/2, h/2 + 8);
+      } else {
+        ctx.fillText('Run simulation to see results', w/2, h/2);
+      }
       ctx.textBaseline = 'alphabetic';
       return;
     }
@@ -1073,23 +1077,36 @@ class TimelineRenderer {
 
       for (let i = 0; i < 2; i++) {
         const by = topY + i * (barH + modelGap);
-        ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i]; ctx.textAlign = 'right';
-        ctx.fillText(models[i].name, nameW - 10, by + barH/2 + 5);
+        const cy = by + barH/2 + 5;
 
+        // Model name label (left of bars)
+        ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i]; ctx.textAlign = 'right';
+        ctx.fillText(models[i].name, nameW - 10, cy);
+
+        // Left bar: success rate
         const bwL = Math.max(2, leftW * (e2e[i] / 100));
         drawBar(leftX, by, bwL, barH, colors[i]);
         ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
-        ctx.fillText(e2e[i] + '%', leftX + bwL + 6, by + barH/2 + 5);
+        ctx.fillText(e2e[i] + '%', leftX + bwL + 6, cy);
 
+        // Right bar: replicas
         const bwR = Math.max(2, rightW * (replicas[i] / maxR));
         drawBar(rightX, by, bwR, barH, colors[i]);
         const valStr = replicas[i].toLocaleString();
+        ctx.font = '13px sans-serif';
         const valW = ctx.measureText(valStr).width;
-        if (rightX + bwR + 6 + valW + 4 < w) {
-          ctx.fillText(valStr, rightX + bwR + 6, by + barH/2 + 5);
+        const nameInBar = models[i].name + '  ' + valStr;
+        const nameInBarW = ctx.measureText(nameInBar).width;
+        // If bar is long enough, put name + value inside
+        if (bwR > nameInBarW + 16) {
+          ctx.fillStyle = '#0d1117'; ctx.textAlign = 'left';
+          ctx.fillText(nameInBar, rightX + 8, cy);
+        } else if (rightX + bwR + 6 + valW + 4 < w) {
+          ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+          ctx.fillText(valStr, rightX + bwR + 6, cy);
         } else {
-          ctx.textAlign = 'right';
-          ctx.fillText(valStr, rightX + bwR - 6, by + barH/2 + 5);
+          ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'right';
+          ctx.fillText(valStr, rightX + bwR - 6, cy);
         }
       }
     }
