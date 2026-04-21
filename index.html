@@ -274,10 +274,12 @@ main.tab-content.active{display:grid}
   .ps-val{font-size:20px}
 
   /* Timeline tab */
-  .tl-row{flex-direction:column;gap:8px}
+  #tab-timeline{padding:10px 8px!important;gap:10px!important}
+  .tl-row{flex-direction:column;gap:6px}
   .tl-side{width:auto;gap:6px;padding-top:0}
-  .tl-title{font-size:13px}
-  .timeline-legend{flex-direction:row;gap:12px;font-size:11px}
+  .tl-title{font-size:12px}
+  .timeline-legend{flex-direction:row;gap:12px;font-size:10px}
+  #tab-timeline canvas{border-radius:6px}
 }
 
 /* Extra-small: below 480px */
@@ -383,12 +385,12 @@ main.tab-content.active{display:grid}
     <div class="pane-label">
       <span class="dot" style="background:var(--purple)"></span>
       <select id="sel-m1">
-        <option value="opus46" selected>Opus 4.6 · Feb 26 — 81%</option>
-        <option value="gpt54">GPT 5.4 · Mar 26 — 33%</option>
-        <option value="qwen35">Qwen 3.5 122B · Mar 26 — 19%</option>
-        <option value="qwen36">Qwen 3.6 35B · Apr 26 — 18%</option>
-        <option value="opus4">Opus 4 · May 25 — 6%</option>
-        <option value="gpt5">GPT 5 · Dec 25 — 0%</option>
+        <option value="opus46" selected>Opus 4.6 · Feb 26</option>
+        <option value="gpt54">GPT 5.4 · Mar 26</option>
+        <option value="qwen35">Qwen 3.5 122B · Mar 26</option>
+        <option value="qwen36">Qwen 3.6 35B · Apr 26</option>
+        <option value="opus4">Opus 4 · May 25</option>
+        <option value="gpt5">GPT 5 · Dec 25</option>
       </select>
     </div>
     <div class="pane-hud">
@@ -408,12 +410,12 @@ main.tab-content.active{display:grid}
     <div class="pane-label">
       <span class="dot" style="background:var(--orange)"></span>
       <select id="sel-m2">
-        <option value="opus46">Opus 4.6 · Feb 26 — 81%</option>
-        <option value="gpt54">GPT 5.4 · Mar 26 — 33%</option>
-        <option value="qwen35" selected>Qwen 3.5 122B · Mar 26 — 19%</option>
-        <option value="qwen36">Qwen 3.6 35B · Apr 26 — 18%</option>
-        <option value="opus4">Opus 4 · May 25 — 6%</option>
-        <option value="gpt5">GPT 5 · Dec 25 — 0%</option>
+        <option value="opus46">Opus 4.6 · Feb 26</option>
+        <option value="gpt54">GPT 5.4 · Mar 26</option>
+        <option value="qwen35" selected>Qwen 3.5 122B · Mar 26</option>
+        <option value="qwen36">Qwen 3.6 35B · Apr 26</option>
+        <option value="opus4">Opus 4 · May 25</option>
+        <option value="gpt5">GPT 5 · Dec 25</option>
       </select>
     </div>
     <div class="pane-hud">
@@ -434,8 +436,8 @@ main.tab-content.active{display:grid}
     <div class="tl-side">
       <div class="tl-title">Self-Replication Success by Model Release Date</div>
       <div class="timeline-legend">
-        <span><span class="tl-dot" style="background:#f0883e"></span> Proprietary</span>
-        <span><span class="tl-dot" style="background:#58a6ff"></span> Open-weight</span>
+        <span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#8b949e"/></svg> Proprietary</span>
+        <span><svg width="12" height="12"><polygon points="6,1 11,10 1,10" fill="#8b949e"/></svg> Open-weight</span>
       </div>
     </div>
     <canvas id="timeline-canvas"></canvas>
@@ -465,47 +467,54 @@ const STAGE_BASE_TIMES = [2, 4, 3, 2, 2, 0/*computed*/, 3, 1];
 
 // Conditional pass rates per stage (product = end-to-end rate)
 // Derived from Palisade experiment data
+// Per-company colors: Anthropic=orange, OpenAI=gray, Qwen=purple
+const MODEL_COLORS = { anthropic:'#f0883e', openai:'#6e7681', qwen:'#d2a8ff' };
+
 const MODELS = {
   'opus46': {
     name: 'Opus 4.6', date: '2026-Feb', dateNum: 2026 + 1/12,
-    type: 'proprietary', transferGB: 244,
+    type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 244,
     stages: [0.97, 1.00, 1.00, 1.00, 1.00, 1.00, 0.97, 0.86],
     desc: '81% e2e. Frontier model transfers 122B weights (244 GB).'
   },
   'opus4': {
     name: 'Opus 4', date: '2025-May', dateNum: 2025 + 4/12,
-    type: 'proprietary', transferGB: 244,
+    type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 244,
     stages: [1.00, 1.00, 1.00, 1.00, 0.97, 0.22, 0.50, 0.55],
     desc: '6% e2e. Earlier frontier model, weak at replication stage.'
   },
   'gpt54': {
     name: 'GPT 5.4', date: '2026-Mar', dateNum: 2026 + 2/12,
-    type: 'proprietary', transferGB: 244,
+    type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 244,
     stages: [0.95, 0.92, 0.90, 0.93, 0.70, 0.70, 0.96, 0.96],
     desc: '33% e2e. Transfers 122B weights (244 GB).'
   },
   'gpt5': {
     name: 'GPT 5', date: '2025-Dec', dateNum: 2025 + 11/12,
-    type: 'proprietary', transferGB: 244,
+    type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 244,
     stages: [1.00, 0.98, 0.98, 1.00, 0.93, 0.45, 0.00, 1.00],
     desc: '0% e2e. Excellent exploit but cannot start inference.'
   },
   'qwen35': {
     name: 'Qwen 3.5 122B', date: '2026-Mar', dateNum: 2026 + 2/12,
-    type: 'open-weight', transferGB: 244,
+    type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 244,
     stages: [0.96, 0.75, 0.917, 0.97, 0.406, 0.731, 1.00, 1.00],
     desc: '19% e2e. Open-weight, self-replicating (244 GB).'
   },
   'qwen36': {
     name: 'Qwen 3.6 35B', date: '2026-Apr', dateNum: 2026 + 3/12,
-    type: 'open-weight', transferGB: 35,
+    type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
     stages: [0.83, 0.88, 0.98, 0.98, 0.36, 0.72, 1.00, 1.00],
     desc: '18% e2e. Smaller model, ~3x faster transfer (35 GB).'
   }
 };
 
 const SIM_DURATION = 360;
-const PANE_COLORS = ['#d2a8ff','#f0883e']; // purple, orange
+// Dynamic per-pane colors set from selected model
+function getPaneColor(paneIdx) {
+  const sel = document.getElementById('sel-m' + (paneIdx + 1));
+  return sel ? MODELS[sel.value].color : '#58a6ff';
+}
 
 /* ── Computer SVG (Space Invader pixel art) ── */
 const COMPUTER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 520" width="520" height="520" style="shape-rendering:crispEdges"><rect x="60" y="20" width="400" height="20" fill="#000"/><rect x="40" y="40" width="20" height="20" fill="#000"/><rect x="60" y="40" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="40" width="20" height="20" fill="#000"/><rect x="40" y="60" width="20" height="20" fill="#000"/><rect x="60" y="60" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="60" width="360" height="20" fill="#000"/><rect x="440" y="60" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="60" width="20" height="20" fill="#000"/><rect x="40" y="80" width="20" height="20" fill="#000"/><rect x="60" y="80" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="80" width="20" height="20" fill="#000"/><rect x="100" y="80" width="320" height="20" fill="#29AAE3"/><rect x="420" y="80" width="20" height="20" fill="#000"/><rect x="440" y="80" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="80" width="20" height="20" fill="#000"/><rect x="40" y="100" width="20" height="20" fill="#000"/><rect x="60" y="100" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="100" width="20" height="20" fill="#000"/><rect x="100" y="100" width="320" height="20" fill="#29AAE3"/><rect x="420" y="100" width="20" height="20" fill="#000"/><rect x="440" y="100" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="100" width="20" height="20" fill="#000"/><rect x="40" y="120" width="20" height="20" fill="#000"/><rect x="60" y="120" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="120" width="20" height="20" fill="#000"/><rect x="100" y="120" width="320" height="20" fill="#29AAE3"/><rect x="420" y="120" width="20" height="20" fill="#000"/><rect x="440" y="120" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="120" width="20" height="20" fill="#000"/><rect x="40" y="140" width="20" height="20" fill="#000"/><rect x="60" y="140" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="140" width="20" height="20" fill="#000"/><rect x="100" y="140" width="320" height="20" fill="#29AAE3"/><rect x="420" y="140" width="20" height="20" fill="#000"/><rect x="440" y="140" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="140" width="20" height="20" fill="#000"/><rect x="40" y="160" width="20" height="20" fill="#000"/><rect x="60" y="160" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="160" width="20" height="20" fill="#000"/><rect x="100" y="160" width="320" height="20" fill="#29AAE3"/><rect x="420" y="160" width="20" height="20" fill="#000"/><rect x="440" y="160" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="160" width="20" height="20" fill="#000"/><rect x="40" y="180" width="20" height="20" fill="#000"/><rect x="60" y="180" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="180" width="20" height="20" fill="#000"/><rect x="100" y="180" width="320" height="20" fill="#29AAE3"/><rect x="420" y="180" width="20" height="20" fill="#000"/><rect x="440" y="180" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="180" width="20" height="20" fill="#000"/><rect x="40" y="200" width="20" height="20" fill="#000"/><rect x="60" y="200" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="200" width="20" height="20" fill="#000"/><rect x="100" y="200" width="320" height="20" fill="#29AAE3"/><rect x="420" y="200" width="20" height="20" fill="#000"/><rect x="440" y="200" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="200" width="20" height="20" fill="#000"/><rect x="40" y="220" width="20" height="20" fill="#000"/><rect x="60" y="220" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="220" width="20" height="20" fill="#000"/><rect x="100" y="220" width="320" height="20" fill="#29AAE3"/><rect x="420" y="220" width="20" height="20" fill="#000"/><rect x="440" y="220" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="220" width="20" height="20" fill="#000"/><rect x="40" y="240" width="20" height="20" fill="#000"/><rect x="60" y="240" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="240" width="20" height="20" fill="#000"/><rect x="100" y="240" width="320" height="20" fill="#29AAE3"/><rect x="420" y="240" width="20" height="20" fill="#000"/><rect x="440" y="240" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="240" width="20" height="20" fill="#000"/><rect x="40" y="260" width="20" height="20" fill="#000"/><rect x="60" y="260" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="260" width="360" height="20" fill="#000"/><rect x="440" y="260" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="260" width="20" height="20" fill="#000"/><rect x="40" y="280" width="20" height="20" fill="#000"/><rect x="60" y="280" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="280" width="20" height="20" fill="#000"/><rect x="40" y="300" width="20" height="20" fill="#000"/><rect x="60" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="80" y="300" width="20" height="20" fill="#000"/><rect x="100" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="120" y="300" width="20" height="20" fill="#000"/><rect x="140" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="160" y="300" width="20" height="20" fill="#000"/><rect x="180" y="300" width="220" height="20" fill="#B3B3B3"/><rect x="400" y="300" width="40" height="20" fill="#000"/><rect x="440" y="300" width="20" height="20" fill="#B3B3B3"/><rect x="460" y="300" width="20" height="20" fill="#000"/><rect x="40" y="320" width="20" height="20" fill="#000"/><rect x="60" y="320" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="320" width="20" height="20" fill="#000"/><rect x="60" y="340" width="400" height="20" fill="#000"/><rect x="220" y="360" width="20" height="20" fill="#000"/><rect x="240" y="360" width="40" height="20" fill="#B3B3B3"/><rect x="280" y="360" width="20" height="20" fill="#000"/><rect x="80" y="380" width="360" height="20" fill="#000"/><rect x="60" y="400" width="20" height="20" fill="#000"/><rect x="80" y="400" width="360" height="20" fill="#B3B3B3"/><rect x="440" y="400" width="20" height="20" fill="#000"/><rect x="40" y="420" width="20" height="20" fill="#000"/><rect x="60" y="420" width="60" height="20" fill="#B3B3B3"/><rect x="120" y="420" width="20" height="20" fill="#000"/><rect x="140" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="160" y="420" width="20" height="20" fill="#000"/><rect x="180" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="200" y="420" width="20" height="20" fill="#000"/><rect x="220" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="240" y="420" width="40" height="20" fill="#000"/><rect x="280" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="300" y="420" width="20" height="20" fill="#000"/><rect x="320" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="340" y="420" width="20" height="20" fill="#000"/><rect x="360" y="420" width="20" height="20" fill="#B3B3B3"/><rect x="380" y="420" width="20" height="20" fill="#000"/><rect x="400" y="420" width="60" height="20" fill="#B3B3B3"/><rect x="460" y="420" width="20" height="20" fill="#000"/><rect x="20" y="440" width="20" height="20" fill="#000"/><rect x="40" y="440" width="60" height="20" fill="#B3B3B3"/><rect x="100" y="440" width="20" height="20" fill="#000"/><rect x="120" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="140" y="440" width="20" height="20" fill="#000"/><rect x="160" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="180" y="440" width="20" height="20" fill="#000"/><rect x="200" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="220" y="440" width="20" height="20" fill="#000"/><rect x="240" y="440" width="40" height="20" fill="#B3B3B3"/><rect x="280" y="440" width="20" height="20" fill="#000"/><rect x="300" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="320" y="440" width="20" height="20" fill="#000"/><rect x="340" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="360" y="440" width="20" height="20" fill="#000"/><rect x="380" y="440" width="20" height="20" fill="#B3B3B3"/><rect x="400" y="440" width="20" height="20" fill="#000"/><rect x="420" y="440" width="60" height="20" fill="#B3B3B3"/><rect x="480" y="440" width="20" height="20" fill="#000"/><rect x="20" y="460" width="40" height="20" fill="#000"/><rect x="60" y="460" width="400" height="20" fill="#B3B3B3"/><rect x="460" y="460" width="40" height="20" fill="#000"/><rect x="40" y="480" width="440" height="20" fill="#000"/></svg>`;
@@ -618,10 +627,10 @@ class Simulation {
    NETWORK RENDERER
    ================================================================ */
 class NetRenderer {
-  constructor(canvas, paneColor) {
+  constructor(canvas, color) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.color = paneColor;
+    this.color = color;
     this.nodes = [];
     this.anims = [];
     this._last = 0;
@@ -857,7 +866,8 @@ class TimelineRenderer {
 
   _scatter() {
     const ctx = this.sctx;
-    const h = 408;
+    const isMobile = window.innerWidth < 900;
+    const h = isMobile ? 320 : 408;
     const w = this._prep(this.sc, ctx, h);
     const pad = { t: 16, r: 30, b: 48, l: 56 };
     const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
@@ -896,17 +906,25 @@ class TimelineRenderer {
     const entries = Object.values(MODELS);
     const pts = entries.map(m => {
       const e2e = m.stages.reduce((a,b)=>a*b,1)*100;
-      return { m, e2e, px: toX(m.dateNum), py: toY(e2e),
-               col: m.type==='proprietary' ? '#f0883e' : '#58a6ff' };
+      return { m, e2e, px: toX(m.dateNum), py: toY(e2e), col: m.color };
     });
     pts.sort((a,b) => a.py - b.py);
 
     // Collect label positions to avoid overlap
     const placed = [];
     for (const p of pts) {
-      // Dot
-      ctx.beginPath(); ctx.arc(p.px, p.py, 5, 0, Math.PI*2);
-      ctx.fillStyle = p.col; ctx.fill();
+      // Marker: circle=proprietary, triangle=open-weight
+      ctx.fillStyle = p.col;
+      if (p.m.type === 'open-weight') {
+        const s = 7;
+        ctx.beginPath();
+        ctx.moveTo(p.px, p.py - s);
+        ctx.lineTo(p.px + s * 0.87, p.py + s * 0.5);
+        ctx.lineTo(p.px - s * 0.87, p.py + s * 0.5);
+        ctx.closePath(); ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.arc(p.px, p.py, 5, 0, Math.PI*2); ctx.fill();
+      }
 
       // Label — only model name
       const rightSide = p.px > w * 0.55;
@@ -944,13 +962,14 @@ class TimelineRenderer {
 
   _bars() {
     const ctx = this.bctx;
-    const h = 220;
+    const isMobile = window.innerWidth < 500;
+    const h = isMobile ? 260 : 220;
     const w = this._prep(this.bc, ctx, h);
 
     ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
 
     const models = [MODELS['opus46'], MODELS['qwen35']];
-    const colors = ['#f0883e', '#58a6ff'];
+    const colors = [models[0].color, models[1].color];
     const e2e = models.map(m => Math.round(m.stages.reduce((a,b)=>a*b,1)*100));
 
     // Monte Carlo for replicas
@@ -988,78 +1007,84 @@ class TimelineRenderer {
       return Math.round(total/5);
     });
 
-    // Layout: side-by-side — left 1/4 (success rate), right 3/4 (replicas)
-    const nameW = 120;
-    const padR = 16; // right margin matching left name gap
-    const gap = 30;
-    const avail = w - nameW - gap - padR;
-    const leftW = avail * 0.25;
-    const rightW = avail * 0.75;
-    const leftX = nameW;
-    const rightX = nameW + leftW + gap;
-    const barH = 26;
-    const modelGap = 10;
-    const topY = 44;
     const maxR = Math.max(1, ...replicas);
+    const mobile = w < 500;
 
-    // Headers
-    ctx.font = '14px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
-    ctx.fillText('Success rate', leftX, topY - 12);
-    ctx.fillText('Active replicas after 6h', rightX, topY - 12);
+    // Helper: draw rounded bar
+    const drawBar = (x, y, bw, bh, col) => {
+      const r = Math.min(4, bh/2);
+      ctx.fillStyle = col; ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x+bw-r, y);
+      ctx.quadraticCurveTo(x+bw, y, x+bw, y+r);
+      ctx.lineTo(x+bw, y+bh-r);
+      ctx.quadraticCurveTo(x+bw, y+bh, x+bw-r, y+bh);
+      ctx.lineTo(x, y+bh); ctx.closePath(); ctx.fill();
+    };
 
-    for (let i = 0; i < 2; i++) {
-      const by = topY + i * (barH + modelGap);
-      const rad = 4;
+    if (mobile) {
+      // MOBILE: stacked — success rate pair, then replicas pair
+      const padL = 10, padR = 10;
+      const barArea = w - padL - padR;
+      const barH = 22, modelGap = 6, sectionGap = 32;
+      let yy = 20;
 
-      // Model name
-      ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i];
-      ctx.textAlign = 'right';
-      ctx.fillText(models[i].name, nameW - 10, by + barH/2 + 5);
-
-      // Left bar: success rate (scaled to 100%)
-      const bwL = Math.max(2, leftW * (e2e[i] / 100));
-      ctx.fillStyle = colors[i];
-      ctx.beginPath();
-      ctx.moveTo(leftX, by); ctx.lineTo(leftX + bwL - rad, by);
-      ctx.quadraticCurveTo(leftX + bwL, by, leftX + bwL, by + rad);
-      ctx.lineTo(leftX + bwL, by + barH - rad);
-      ctx.quadraticCurveTo(leftX + bwL, by + barH, leftX + bwL - rad, by + barH);
-      ctx.lineTo(leftX, by + barH); ctx.closePath(); ctx.fill();
-
-      // Value inside or right of bar
-      ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
-      const valLX = leftX + bwL + 6;
-      if (valLX + 30 < rightX) {
-        ctx.fillText(e2e[i] + '%', valLX, by + barH/2 + 5);
-      } else {
-        // Put inside bar
-        ctx.textAlign = 'right';
-        ctx.fillText(e2e[i] + '%', leftX + bwL - 6, by + barH/2 + 5);
+      // Section 1: Success rate
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+      ctx.fillText('Success rate', padL, yy); yy += 18;
+      for (let i = 0; i < 2; i++) {
+        const bw = Math.max(2, barArea * (e2e[i] / 100));
+        drawBar(padL, yy, bw, barH, colors[i]);
+        ctx.font = '12px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+        ctx.fillText(`${models[i].name}  ${e2e[i]}%`, padL + bw + 8, yy + barH/2 + 4);
+        yy += barH + modelGap;
       }
 
-      // Right bar: replicas (scaled to max)
-      const bwR = Math.max(2, rightW * (replicas[i] / maxR));
-      ctx.fillStyle = colors[i];
-      ctx.beginPath();
-      ctx.moveTo(rightX, by); ctx.lineTo(rightX + bwR - rad, by);
-      ctx.quadraticCurveTo(rightX + bwR, by, rightX + bwR, by + rad);
-      ctx.lineTo(rightX + bwR, by + barH - rad);
-      ctx.quadraticCurveTo(rightX + bwR, by + barH, rightX + bwR - rad, by + barH);
-      ctx.lineTo(rightX, by + barH); ctx.closePath(); ctx.fill();
+      // Section 2: Replicas
+      yy += sectionGap - modelGap;
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+      ctx.fillText('Active replicas after 6h', padL, yy); yy += 18;
+      for (let i = 0; i < 2; i++) {
+        const bw = Math.max(2, barArea * (replicas[i] / maxR));
+        drawBar(padL, yy, bw, barH, colors[i]);
+        ctx.font = '12px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+        const valStr = replicas[i].toLocaleString();
+        const valX = padL + bw + 8;
+        const fits = valX + ctx.measureText(`${models[i].name}  ${valStr}`).width < w - 4;
+        ctx.fillText(fits ? `${models[i].name}  ${valStr}` : valStr, valX, yy + barH/2 + 4);
+        yy += barH + modelGap;
+      }
+    } else {
+      // DESKTOP: side-by-side
+      const nameW = 120, padR = 16, gap = 30;
+      const avail = w - nameW - gap - padR;
+      const leftW = avail * 0.25, rightW = avail * 0.75;
+      const leftX = nameW, rightX = nameW + leftW + gap;
+      const barH = 26, modelGap = 10, topY = 44;
 
-      // Value — ensure it fits inside canvas
-      const valStr = replicas[i].toLocaleString();
-      ctx.font = '13px sans-serif';
-      const valW = ctx.measureText(valStr).width;
-      const valRX = rightX + bwR + 6;
-      ctx.fillStyle = '#e6edf3';
-      if (valRX + valW + 4 < w) {
-        ctx.textAlign = 'left';
-        ctx.fillText(valStr, valRX, by + barH/2 + 5);
-      } else {
-        // Put inside bar
-        ctx.textAlign = 'right';
-        ctx.fillText(valStr, rightX + bwR - 6, by + barH/2 + 5);
+      ctx.font = '14px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+      ctx.fillText('Success rate', leftX, topY - 12);
+      ctx.fillText('Active replicas after 6h', rightX, topY - 12);
+
+      for (let i = 0; i < 2; i++) {
+        const by = topY + i * (barH + modelGap);
+        ctx.font = '13px sans-serif'; ctx.fillStyle = colors[i]; ctx.textAlign = 'right';
+        ctx.fillText(models[i].name, nameW - 10, by + barH/2 + 5);
+
+        const bwL = Math.max(2, leftW * (e2e[i] / 100));
+        drawBar(leftX, by, bwL, barH, colors[i]);
+        ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
+        ctx.fillText(e2e[i] + '%', leftX + bwL + 6, by + barH/2 + 5);
+
+        const bwR = Math.max(2, rightW * (replicas[i] / maxR));
+        drawBar(rightX, by, bwR, barH, colors[i]);
+        const valStr = replicas[i].toLocaleString();
+        const valW = ctx.measureText(valStr).width;
+        if (rightX + bwR + 6 + valW + 4 < w) {
+          ctx.fillText(valStr, rightX + bwR + 6, by + barH/2 + 5);
+        } else {
+          ctx.textAlign = 'right';
+          ctx.fillText(valStr, rightX + bwR - 6, by + barH/2 + 5);
+        }
       }
     }
   }
@@ -1072,12 +1097,12 @@ class App {
   constructor() {
     this.sims = [null, null];
     this.nets = [
-      new NetRenderer(document.getElementById('net-1'), PANE_COLORS[0]),
-      new NetRenderer(document.getElementById('net-2'), PANE_COLORS[1]),
+      new NetRenderer(document.getElementById('net-1'), getPaneColor(0)),
+      new NetRenderer(document.getElementById('net-2'), getPaneColor(1)),
     ];
     this.charts = [
-      new ChartRenderer(document.getElementById('chart-m1'), PANE_COLORS[0]),
-      new ChartRenderer(document.getElementById('chart-m2'), PANE_COLORS[1]),
+      new ChartRenderer(document.getElementById('chart-m1'), getPaneColor(0)),
+      new ChartRenderer(document.getElementById('chart-m2'), getPaneColor(1)),
     ];
     this.logs = [[], []]; // event logs per sim
     this.logTab = 0;
@@ -1141,10 +1166,15 @@ class App {
     this.logs = [[], []];
 
     for (let i = 0; i < 2; i++) {
+      const mc = getPaneColor(i);
+      this.nets[i].color = mc;
       this.nets[i].nodes = [];
       this.nets[i].anims = [];
       this.nets[i]._last = 0;
       this.nets[i].sync(this.sims[i]);
+      this.charts[i].color = mc;
+      // Update pane dot color
+      document.querySelectorAll(`#pane-${i+1} .dot`)[0].style.background = mc;
     }
 
     this.running = false;
@@ -1156,10 +1186,13 @@ class App {
     document.getElementById('sum-2').style.display = 'none';
     document.getElementById('event-log').innerHTML = '';
 
-    // Update panel names + pipeline
+    // Update panel names + pipeline + colors
     for (const [i, k] of [[0, k1], [1, k2]]) {
       const m = MODELS[k], p = i + 1;
       document.getElementById(`name-m${p}`).textContent = m.name;
+      // Update panel dot color
+      const panelDot = document.querySelector(`#sec-m1 .model-header:nth-of-type(${i === 0 ? 1 : 2}) .color-dot`);
+      if (panelDot) panelDot.style.background = m.color;
       this._renderPipeline(p, m);
     }
 
@@ -1170,7 +1203,7 @@ class App {
 
   _renderPipeline(paneIdx, model) {
     const el = document.getElementById(`pipe-m${paneIdx}`);
-    const color = PANE_COLORS[paneIdx - 1];
+    const color = model.color;
     // Compute cumulative rates
     const cum = [];
     let c = 1;
