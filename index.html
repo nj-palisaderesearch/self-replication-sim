@@ -488,6 +488,7 @@ main.tab-content.active{display:grid}
   <div class="tl-row">
     <div class="tl-side">
       <div class="tl-title">Success rate vs. compound replication</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:-4px">Draft numbers</div>
     </div>
     <canvas id="bar-canvas"></canvas>
   </div>
@@ -546,8 +547,8 @@ const MODELS = {
   'qwen36': {
     name: 'Qwen 3.6 35B', date: '2026-Apr', dateNum: 2026 + 3/12,
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
-    stages: [0.83, 0.88, 0.98, 0.98, 0.36, 0.72, 1.00, 1.00],
-    desc: '18% e2e. Smaller model, ~3x faster transfer (35 GB).'
+    stages: [0.93, 0.914, 0.976, 0.964, 0.3125, 0.40, 1.00, 1.00],
+    desc: '10% e2e. Smaller model, ~3x faster transfer (35 GB).'
   },
   'qwen35s': {
     name: 'Qwen 3.5 35B', date: '2026-Mar', dateNum: 2026 + 2/12,
@@ -1010,7 +1011,7 @@ class TimelineRenderer {
     for (const fam of Object.values(byFamily)) {
       if (fam.length < 2) continue;
       fam.sort((a, b) => a.m.dateNum - b.m.dateNum);
-      ctx.strokeStyle = fam[0].col + '80';
+      ctx.strokeStyle = fam[0].col + 'c0';
       ctx.beginPath();
       ctx.moveTo(fam[0].px, fam[0].py);
       for (let i = 1; i < fam.length; i++) ctx.lineTo(fam[i].px, fam[i].py);
