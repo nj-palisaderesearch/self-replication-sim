@@ -256,11 +256,12 @@ main.tab-content.active{display:grid}
     border-bottom:none;padding:4px 8px;gap:4px;
     flex:1;min-width:140px;
   }
-  .panel-section:last-child{flex-basis:100%}
+  .panel-section:last-child{display:none} /* hide log section on mobile */
   .section-title{font-size:9px;margin-bottom:2px}
   .model-header{font-size:11px;gap:4px}
   .model-header .side{font-size:9px}
   .pipeline{display:none} /* hide pipeline on mobile — too detailed */
+  .exp-overlay .pipeline{display:flex!important} /* but show inside overlay */
   .log-section{display:none} /* hide log on mobile */
   .speed-lbl{font-size:8px}
   .spd-btn,.bw-btn{padding:3px 6px;font-size:10px}
@@ -273,7 +274,7 @@ main.tab-content.active{display:grid}
 
   /* Sim panes: stack */
   .sim-pane{
-    flex:1;min-height:34vh;
+    flex:1;min-height:30vh;
     border-right:none;border-bottom:1px solid var(--border);
   }
   .sim-pane:last-child{border-bottom:none}
@@ -301,7 +302,6 @@ main.tab-content.active{display:grid}
 
   /* Shrink panel more */
   .panel-section.exp-section{display:none}
-  .panel{padding:4px 8px}
 
   /* Timeline tab */
   #tab-timeline{padding:10px 8px!important;gap:10px!important}
@@ -321,7 +321,7 @@ main.tab-content.active{display:grid}
 
   .panel{padding:4px 6px}
   .panel-section{min-width:100px;padding:3px 4px}
-  .sim-pane{min-height:35vh}
+  .sim-pane{min-height:28vh}
   .pane-label{font-size:11px}
   .pane-label select{font-size:11px}
   .pane-chart canvas{width:150px!important;height:70px!important}
