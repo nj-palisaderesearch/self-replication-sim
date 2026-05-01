@@ -520,48 +520,56 @@ const MODELS = {
     name: 'Opus 4.6', date: '2026-Feb', dateNum: 2026 + 1/12,
     type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 244,
     stages: [0.97, 1.00, 1.00, 1.00, 1.00, 1.00, 0.97, 0.86],
-    desc: '81% e2e. Frontier model transfers 122B weights (244 GB).'
+    cycleMin: 45,
+    desc: '81% e2e. Frontier model transfers 122B weights (244 GB). Assumed 45-min cycle.'
   },
   'opus4': {
     name: 'Opus 4', date: '2025-May', dateNum: 2025 + 4/12,
     type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 244,
     stages: [1.00, 1.00, 1.00, 1.00, 0.97, 0.22, 0.50, 0.55],
-    desc: '6% e2e. Earlier frontier model, weak at replication stage.'
+    cycleMin: 45,
+    desc: '6% e2e. Earlier frontier model, weak at replication stage. Assumed 45-min cycle.'
   },
   'gpt54': {
     name: 'GPT 5.4', date: '2026-Mar', dateNum: 2026 + 2/12,
     type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 244,
     stages: [0.95, 0.92, 0.90, 0.93, 0.70, 0.70, 0.96, 0.96],
-    desc: '33% e2e. Transfers 122B weights (244 GB).'
+    cycleMin: 45,
+    desc: '33% e2e. Transfers 122B weights (244 GB). Assumed 45-min cycle.'
   },
   'gpt5': {
     name: 'GPT 5', date: '2025-Dec', dateNum: 2025 + 11/12,
     type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 244,
     stages: [1.00, 0.98, 0.98, 1.00, 0.93, 0.45, 0.00, 1.00],
-    desc: '0% e2e. Excellent exploit but cannot start inference.'
+    cycleMin: 45,
+    desc: '0% e2e. Excellent exploit but cannot start inference. Assumed 45-min cycle.'
   },
   'qwen35': {
     name: 'Qwen 3.5 122B', date: '2026-Mar', dateNum: 2026 + 2/12,
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 244,
     stages: [0.96, 0.75, 0.917, 0.97, 0.406, 0.731, 1.00, 1.00],
-    desc: '19% e2e. Open-weight, self-replicating (244 GB).'
+    cycleMin: 45,
+    desc: '19% e2e. Open-weight, self-replicating (244 GB). Assumed 45-min cycle.'
   },
   'qwen36': {
     name: 'Qwen 3.6 35B', date: '2026-Apr', dateNum: 2026 + 3/12,
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
     stages: [0.93, 0.914, 0.976, 0.964, 0.3125, 0.40, 1.00, 1.00],
-    desc: '10% e2e. Smaller model, ~3x faster transfer (35 GB).'
+    cycleMin: 45,
+    desc: '10% e2e. Smaller model, ~3x faster transfer (35 GB). Assumed 45-min cycle.'
   },
   'qwen3627': {
     name: 'Qwen 3.6 27B', date: '2026-Apr', dateNum: 2026 + 3/12,
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 27,
     stages: [1.00, 0.5833, 1.00, 1.00, 0.9643, 0.7778, 0.7619, 1.00],
-    desc: '33% e2e. Smaller open-weight, matches GPT 5.4 on a single A100 (27 GB).'
+    cycleMin: 33,
+    desc: '33% e2e. Smaller open-weight, matches GPT 5.4 on a single A100 (27 GB). Measured 33-min median cycle.'
   },
   'qwen35s': {
     name: 'Qwen 3.5 35B', date: '2026-Mar', dateNum: 2026 + 2/12,
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
     stages: [0.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
+    cycleMin: 45,
     desc: '0% e2e. Could not discover webapp.',
     timelineOnly: true // not in simulator dropdowns
   }
@@ -598,9 +606,15 @@ class Simulation {
     this.done = false;
     this.history = [];
 
-    // Compute per-stage times for this model
+    // Compute per-stage times for this model.
+    // If the model declares cycleMin, scale the non-transfer stages so the
+    // total successful cycle equals that target (measured/assumed end-to-end
+    // attempt time). This overrides the bandwidth-driven copy estimate.
     const copyMin = this.model.transferGB * 8 / bandwidthMbps / 60;
-    this.stageTimes = STAGE_BASE_TIMES.map((t, i) => i === 5 ? copyMin : t);
+    const baseSum = STAGE_BASE_TIMES.reduce((a, b) => a + b, 0);
+    const target = this.model.cycleMin;
+    const scale = target ? Math.max(0.05, (target - copyMin) / baseSum) : 1;
+    this.stageTimes = STAGE_BASE_TIMES.map((t, i) => i === 5 ? copyMin : t * scale);
     // total successful attempt time (for reference)
     this.fullTime = this.stageTimes.reduce((a, b) => a + b, 0);
 
@@ -1043,7 +1057,9 @@ class TimelineRenderer {
     // Monte Carlo for replicas
     const replicas = models.map(m => {
       const copyMin = m.transferGB * 8 / bandwidthMbps / 60;
-      const st = STAGE_BASE_TIMES.map((t,i) => i===5 ? copyMin : t);
+      const baseSum = STAGE_BASE_TIMES.reduce((a, b) => a + b, 0);
+      const scale = m.cycleMin ? Math.max(0.05, (m.cycleMin - copyMin) / baseSum) : 1;
+      const st = STAGE_BASE_TIMES.map((t,i) => i===5 ? copyMin : t * scale);
       let total = 0;
       for (let run = 0; run < 5; run++) {
         let agents = [{next:0}], copies = 0;
