@@ -419,6 +419,7 @@ main.tab-content.active{display:grid}
         <option value="gpt54">GPT 5.4 · Mar 26</option>
         <option value="qwen35">Qwen 3.5 122B · Mar 26</option>
         <option value="qwen36">Qwen 3.6 35B · Apr 26</option>
+        <option value="qwen3627">Qwen 3.6 27B · Apr 26</option>
         <option value="opus4">Opus 4 · May 25</option>
         <option value="gpt5">GPT 5 · Dec 25</option>
       </select>
@@ -450,6 +451,7 @@ main.tab-content.active{display:grid}
         <option value="gpt54">GPT 5.4 · Mar 26</option>
         <option value="qwen35" selected>Qwen 3.5 122B · Mar 26</option>
         <option value="qwen36">Qwen 3.6 35B · Apr 26</option>
+        <option value="qwen3627">Qwen 3.6 27B · Apr 26</option>
         <option value="opus4">Opus 4 · May 25</option>
         <option value="gpt5">GPT 5 · Dec 25</option>
       </select>
@@ -549,6 +551,12 @@ const MODELS = {
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
     stages: [0.93, 0.914, 0.976, 0.964, 0.3125, 0.40, 1.00, 1.00],
     desc: '10% e2e. Smaller model, ~3x faster transfer (35 GB).'
+  },
+  'qwen3627': {
+    name: 'Qwen 3.6 27B', date: '2026-Apr', dateNum: 2026 + 3/12,
+    type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 27,
+    stages: [1.00, 0.5833, 1.00, 1.00, 0.9643, 0.7778, 0.7619, 1.00],
+    desc: '33% e2e. Smaller open-weight, matches GPT 5.4 on a single A100 (27 GB).'
   },
   'qwen35s': {
     name: 'Qwen 3.5 35B', date: '2026-Mar', dateNum: 2026 + 2/12,
