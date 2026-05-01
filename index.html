@@ -384,13 +384,13 @@ main.tab-content.active{display:grid}
       <div class="section-title">Experimental data</div>
       <div class="model-header">
         <span class="color-dot" id="dot-m1"></span>
-        <span id="name-m1">Opus 4.6</span>
+        <span id="name-m1">Qwen 3.6 27B</span>
         <span class="side">Left</span>
       </div>
       <div class="pipeline" id="pipe-m1"></div>
       <div class="model-header" style="margin-top:6px">
         <span class="color-dot" id="dot-m2"></span>
-        <span id="name-m2">Qwen 3.5 122B</span>
+        <span id="name-m2">GPT 5.4</span>
         <span class="side">Right</span>
       </div>
       <div class="pipeline" id="pipe-m2"></div>
@@ -415,11 +415,11 @@ main.tab-content.active{display:grid}
     <div class="pane-label">
       <span class="dot" style="background:var(--purple)"></span>
       <select id="sel-m1">
-        <option value="opus46" selected>Opus 4.6 · Feb 26</option>
+        <option value="opus46">Opus 4.6 · Feb 26</option>
         <option value="gpt54">GPT 5.4 · Mar 26</option>
         <option value="qwen35">Qwen 3.5 122B · Mar 26</option>
         <option value="qwen36">Qwen 3.6 35B · Apr 26</option>
-        <option value="qwen3627">Qwen 3.6 27B · Apr 26</option>
+        <option value="qwen3627" selected>Qwen 3.6 27B · Apr 26</option>
         <option value="opus4">Opus 4 · May 25</option>
         <option value="gpt5">GPT 5 · Dec 25</option>
       </select>
@@ -431,7 +431,7 @@ main.tab-content.active{display:grid}
     <button class="exp-btn" onclick="document.getElementById('exp-ov-1').classList.add('show')">Experimental data</button>
     <div class="exp-overlay" id="exp-ov-1">
       <button class="exp-close" onclick="this.parentElement.classList.remove('show')">&times;</button>
-      <div class="exp-title" id="exp-title-1">Opus 4.6</div>
+      <div class="exp-title" id="exp-title-1">Qwen 3.6 27B</div>
       <div class="pipeline" id="exp-pipe-1"></div>
     </div>
     <div class="pane-summary" id="sum-1">
@@ -448,8 +448,8 @@ main.tab-content.active{display:grid}
       <span class="dot" style="background:var(--orange)"></span>
       <select id="sel-m2">
         <option value="opus46">Opus 4.6 · Feb 26</option>
-        <option value="gpt54">GPT 5.4 · Mar 26</option>
-        <option value="qwen35" selected>Qwen 3.5 122B · Mar 26</option>
+        <option value="gpt54" selected>GPT 5.4 · Mar 26</option>
+        <option value="qwen35">Qwen 3.5 122B · Mar 26</option>
         <option value="qwen36">Qwen 3.6 35B · Apr 26</option>
         <option value="qwen3627">Qwen 3.6 27B · Apr 26</option>
         <option value="opus4">Opus 4 · May 25</option>
@@ -463,7 +463,7 @@ main.tab-content.active{display:grid}
     <button class="exp-btn" onclick="document.getElementById('exp-ov-2').classList.add('show')">Experimental data</button>
     <div class="exp-overlay" id="exp-ov-2">
       <button class="exp-close" onclick="this.parentElement.classList.remove('show')">&times;</button>
-      <div class="exp-title" id="exp-title-2">Qwen 3.5 122B</div>
+      <div class="exp-title" id="exp-title-2">GPT 5.4</div>
       <div class="pipeline" id="exp-pipe-2"></div>
     </div>
     <div class="pane-summary" id="sum-2">
@@ -607,14 +607,23 @@ class Simulation {
     this.history = [];
 
     // Compute per-stage times for this model.
-    // If the model declares cycleMin, scale the non-transfer stages so the
-    // total successful cycle equals that target (measured/assumed end-to-end
-    // attempt time). This overrides the bandwidth-driven copy estimate.
-    const copyMin = this.model.transferGB * 8 / bandwidthMbps / 60;
-    const baseSum = STAGE_BASE_TIMES.reduce((a, b) => a + b, 0);
-    const target = this.model.cycleMin;
-    const scale = target ? Math.max(0.05, (target - copyMin) / baseSum) : 1;
-    this.stageTimes = STAGE_BASE_TIMES.map((t, i) => i === 5 ? copyMin : t * scale);
+    // - If cycleMin is set, that is the holistic measured/assumed end-to-end
+    //   attempt time; distribute it across all stages including stage 5 so
+    //   the failure model still has non-zero "obtained weights" duration.
+    // - Otherwise fall back to the bandwidth-derived copy time. The unit
+    //   conversion is GB -> Mb (factor 8000, not 8) so the slider behaves
+    //   correctly: 244 GB at 100 Mbps takes 325 min, not 0.3 min.
+    const baseSum = STAGE_BASE_TIMES.reduce((a, b) => a + b, 0); // 17
+    if (this.model.cycleMin) {
+      const stage5Base = 5; // representative "obtained weights" weight
+      const scale = this.model.cycleMin / (baseSum + stage5Base);
+      this.stageTimes = STAGE_BASE_TIMES.map((t, i) =>
+        (i === 5 ? stage5Base : t) * scale
+      );
+    } else {
+      const copyMin = this.model.transferGB * 8000 / bandwidthMbps / 60;
+      this.stageTimes = STAGE_BASE_TIMES.map((t, i) => i === 5 ? copyMin : t);
+    }
     // total successful attempt time (for reference)
     this.fullTime = this.stageTimes.reduce((a, b) => a + b, 0);
 
@@ -1056,10 +1065,16 @@ class TimelineRenderer {
 
     // Monte Carlo for replicas
     const replicas = models.map(m => {
-      const copyMin = m.transferGB * 8 / bandwidthMbps / 60;
       const baseSum = STAGE_BASE_TIMES.reduce((a, b) => a + b, 0);
-      const scale = m.cycleMin ? Math.max(0.05, (m.cycleMin - copyMin) / baseSum) : 1;
-      const st = STAGE_BASE_TIMES.map((t,i) => i===5 ? copyMin : t * scale);
+      let st;
+      if (m.cycleMin) {
+        const stage5Base = 5;
+        const scale = m.cycleMin / (baseSum + stage5Base);
+        st = STAGE_BASE_TIMES.map((t, i) => (i === 5 ? stage5Base : t) * scale);
+      } else {
+        const copyMin = m.transferGB * 8000 / bandwidthMbps / 60;
+        st = STAGE_BASE_TIMES.map((t, i) => i === 5 ? copyMin : t);
+      }
       let total = 0;
       for (let run = 0; run < 5; run++) {
         let agents = [{next:0}], copies = 0;
