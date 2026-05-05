@@ -374,7 +374,7 @@ main.tab-content.active{display:grid}
       <div class="action-group" style="display:flex;gap:10px;align-items:center">
         <button class="btn-p" id="btn-play">Start</button>
         <span id="finished-label" style="display:none;font-size:16px;color:var(--green)">&#10003;</span>
-        <span class="sim-time" id="sim-time">0h 00m <small>/ 6h</small></span>
+        <span class="sim-time" id="sim-time">0h 00m <small>/ 24h</small></span>
       </div>
       <div class="progress-track"><div class="progress-fill" id="progress-bar"></div></div>
     </div>
@@ -579,7 +579,7 @@ const MODELS = {
   }
 };
 
-const SIM_DURATION = 360;
+const SIM_DURATION = 1440; // 24 hours in minutes
 // Dynamic per-pane colors set from selected model
 function getPaneColor(paneIdx) {
   const sel = document.getElementById('sel-m' + (paneIdx + 1));
@@ -911,7 +911,7 @@ class ChartRenderer {
       ctx.textAlign = 'right'; ctx.fillText(Math.round(maxA * i / 2), pad.l - 2, y + 3);
     }
     ctx.textAlign = 'center';
-    for (let hr = 0; hr <= 6; hr += 3) {
+    for (let hr = 0; hr <= 24; hr += 6) {
       ctx.fillText(hr + 'h', pad.l + pw * (hr * 60 / SIM_DURATION), h - 2);
     }
     ctx.beginPath(); ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
@@ -1085,7 +1085,7 @@ class TimelineRenderer {
       let total = 0;
       for (let run = 0; run < 5; run++) {
         let agents = [{next:0}], copies = 0;
-        for (let t = 0; t <= 360; t++) {
+        for (let t = 0; t <= SIM_DURATION; t++) {
           const n = agents.length;
           for (let i = 0; i < n; i++) {
             if (t < agents[i].next) continue;
@@ -1149,7 +1149,7 @@ class TimelineRenderer {
       // Section 2: Replicas (full bar area)
       yy += sectionGap - modelGap;
       ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
-      ctx.fillText('Active replicas after 6h', padL, yy); yy += 18;
+      ctx.fillText('Active replicas after 24h', padL, yy); yy += 18;
       for (let i = 0; i < 2; i++) {
         const bw = Math.max(2, barArea * (replicas[i] / maxR));
         drawBar(padL, yy, bw, barH, colors[i]);
@@ -1177,7 +1177,7 @@ class TimelineRenderer {
 
       ctx.font = '14px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
       ctx.fillText('Success rate', leftX, topY - 12);
-      ctx.fillText('Active replicas after 6h', rightX, topY - 12);
+      ctx.fillText('Active replicas after 24h', rightX, topY - 12);
 
       for (let i = 0; i < 2; i++) {
         const by = topY + i * (barH + modelGap);
@@ -1458,7 +1458,7 @@ class App {
     const maxTime = Math.max(this.sims[0].time, this.sims[1].time);
     const hrs = Math.floor(maxTime / 60), mins = Math.floor(maxTime % 60);
     document.getElementById('sim-time').innerHTML =
-      `${hrs}h ${String(mins).padStart(2,'0')}m <small>/ 6h</small>`;
+      `${hrs}h ${String(mins).padStart(2,'0')}m <small>/ 24h</small>`;
     document.getElementById('progress-bar').style.width = (maxTime / SIM_DURATION * 100) + '%';
   }
 
