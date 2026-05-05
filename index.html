@@ -520,41 +520,41 @@ const STAGE_BASE_TIMES = [2, 4, 3, 2, 2, 0/*computed*/, 3, 1];
 const MODEL_COLORS = { anthropic:'#f0883e', openai:'#4a7a5b', qwen:'#5B43D4' };
 
 const MODELS = {
-	  'opus46': {
-	    name: 'Opus 4.6', date: '2026-Feb', dateNum: 2026 + 1/12,
-	    type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 119,
-	    stages: [0.97, 1.00, 1.00, 1.00, 1.00, 1.00, 0.97, 0.86],
-	    cycleMin: 45,
-	    desc: '81% e2e. Frontier model transfers 122B FP8 weights (119 GB). Assumed 45-min cycle.'
-	  },
-	  'opus4': {
-	    name: 'Opus 4', date: '2025-May', dateNum: 2025 + 4/12,
-	    type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 119,
-	    stages: [1.00, 1.00, 1.00, 1.00, 0.97, 0.22, 0.50, 0.55],
-	    cycleMin: 45,
-	    desc: '6% e2e. Earlier frontier model, weak at replication stage. Assumed 45-min cycle.'
-	  },
-	  'gpt54': {
-	    name: 'GPT 5.4', date: '2026-Mar', dateNum: 2026 + 2/12,
-	    type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 119,
-	    stages: [0.95, 0.92, 0.90, 0.93, 0.70, 0.70, 0.96, 0.96],
-	    cycleMin: 45,
-	    desc: '33% e2e. Transfers 122B FP8 weights (119 GB). Assumed 45-min cycle.'
-	  },
-	  'gpt5': {
-	    name: 'GPT 5', date: '2025-Dec', dateNum: 2025 + 11/12,
-	    type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 119,
-	    stages: [1.00, 0.98, 0.98, 1.00, 0.93, 0.45, 0.00, 1.00],
-	    cycleMin: 45,
-	    desc: '0% e2e. Excellent exploit but cannot start inference. Assumed 45-min cycle.'
-	  },
-	  'qwen35': {
-	    name: 'Qwen 3.5 122B', date: '2026-Mar', dateNum: 2026 + 2/12,
-	    type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 119,
-	    stages: [0.96, 0.75, 0.917, 0.97, 0.406, 0.731, 1.00, 1.00],
-	    cycleMin: 45,
-	    desc: '19% e2e. Open-weight, self-replicating (119 GB FP8). Assumed 45-min cycle.'
-	  },
+  'opus46': {
+    name: 'Opus 4.6', date: '2026-Feb', dateNum: 2026 + 1/12,
+    type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 119,
+    stages: [0.97, 1.00, 1.00, 1.00, 1.00, 1.00, 0.97, 0.86],
+    cycleMin: 45,
+    desc: '81% e2e. Frontier model transfers 122B FP8 weights (119 GB). Assumed 45-min cycle.'
+  },
+  'opus4': {
+    name: 'Opus 4', date: '2025-May', dateNum: 2025 + 4/12,
+    type: 'proprietary', color: MODEL_COLORS.anthropic, transferGB: 119,
+    stages: [1.00, 1.00, 1.00, 1.00, 0.97, 0.22, 0.50, 0.55],
+    cycleMin: 45,
+    desc: '6% e2e. Earlier frontier model, weak at replication stage. Assumed 45-min cycle.'
+  },
+  'gpt54': {
+    name: 'GPT 5.4', date: '2026-Mar', dateNum: 2026 + 2/12,
+    type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 119,
+    stages: [0.95, 0.92, 0.90, 0.93, 0.70, 0.70, 0.96, 0.96],
+    cycleMin: 45,
+    desc: '33% e2e. Transfers 122B FP8 weights (119 GB). Assumed 45-min cycle.'
+  },
+  'gpt5': {
+    name: 'GPT 5', date: '2025-Dec', dateNum: 2025 + 11/12,
+    type: 'proprietary', color: MODEL_COLORS.openai, transferGB: 119,
+    stages: [1.00, 0.98, 0.98, 1.00, 0.93, 0.45, 0.00, 1.00],
+    cycleMin: 45,
+    desc: '0% e2e. Excellent exploit but cannot start inference. Assumed 45-min cycle.'
+  },
+  'qwen35': {
+    name: 'Qwen 3.5 122B', date: '2026-Mar', dateNum: 2026 + 2/12,
+    type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 119,
+    stages: [0.96, 0.75, 0.917, 0.97, 0.406, 0.731, 1.00, 1.00],
+    cycleMin: 45,
+    desc: '19% e2e. Open-weight, self-replicating (119 GB FP8). Assumed 45-min cycle.'
+  },
   'qwen36': {
     name: 'Qwen 3.6 35B', date: '2026-Apr', dateNum: 2026 + 3/12,
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
