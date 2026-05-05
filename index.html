@@ -383,8 +383,8 @@ canvas#timeline-canvas, canvas#bar-canvas{cursor:default}
         <span class="speed-lbl">Network</span>
         <button class="bw-btn" data-bw="100">100</button>
         <button class="bw-btn" data-bw="1000">1 000</button>
-        <button class="bw-btn active" data-bw="2500">2 500</button>
-        <button class="bw-btn" data-bw="10000">10 000</button>
+        <button class="bw-btn" data-bw="2500">2 500</button>
+        <button class="bw-btn active" data-bw="10000">10 000</button>
         <span class="speed-lbl" style="margin-left:2px">Mbps</span>
       </div>
       <div class="action-group" style="display:flex;gap:10px;align-items:center">
@@ -406,7 +406,7 @@ canvas#timeline-canvas, canvas#bar-canvas{cursor:default}
       <div class="pipeline" id="pipe-m1"></div>
       <div class="model-header" style="margin-top:6px">
         <span class="color-dot" id="dot-m2"></span>
-        <span id="name-m2">GPT 5.4</span>
+        <span id="name-m2">Opus 4.6</span>
         <span class="side">Right</span>
       </div>
       <div class="pipeline" id="pipe-m2"></div>
@@ -463,8 +463,8 @@ canvas#timeline-canvas, canvas#bar-canvas{cursor:default}
     <div class="pane-label">
       <span class="dot" style="background:var(--orange)"></span>
       <select id="sel-m2">
-        <option value="opus46">Opus 4.6 · Feb 26</option>
-        <option value="gpt54" selected>GPT 5.4 · Mar 26</option>
+        <option value="opus46" selected>Opus 4.6 · Feb 26</option>
+        <option value="gpt54">GPT 5.4 · Mar 26</option>
         <option value="qwen35">Qwen 3.5 122B · Mar 26</option>
         <option value="qwen36">Qwen 3.6 35B-A3B · Apr 26</option>
         <option value="qwen3627">Qwen 3.6 27B · Apr 26</option>
@@ -479,7 +479,7 @@ canvas#timeline-canvas, canvas#bar-canvas{cursor:default}
     <button class="exp-btn" onclick="document.getElementById('exp-ov-2').classList.add('show')">Experimental data</button>
     <div class="exp-overlay" id="exp-ov-2">
       <button class="exp-close" onclick="this.parentElement.classList.remove('show')">&times;</button>
-      <div class="exp-title" id="exp-title-2">GPT 5.4</div>
+      <div class="exp-title" id="exp-title-2">Opus 4.6</div>
       <div class="pipeline" id="exp-pipe-2"></div>
     </div>
     <div class="pane-summary" id="sum-2">
@@ -520,7 +520,7 @@ canvas#timeline-canvas, canvas#bar-canvas{cursor:default}
 // weight transfers in our experiments (~320 MB/s). Real-world distribution
 // p25..p75 was 280..410 MB/s, CPU-bound on SSH AES rather than network-limited.
 const DEFAULT_BANDWIDTH_MBPS = 2500;
-let bandwidthMbps = DEFAULT_BANDWIDTH_MBPS;
+let bandwidthMbps = 10000;
 
 const STAGE_NAMES = [
   'Discover webapp', 'Get admin page', 'SSH into target', 'Get root',
