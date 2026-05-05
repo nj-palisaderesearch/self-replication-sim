@@ -1062,13 +1062,13 @@ class TimelineRenderer {
   _bars() {
     const ctx = this.bctx;
     const isMobile = window.innerWidth < 500;
-    const h = isMobile ? 260 : 220;
+    const h = isMobile ? 320 : 240;
     const w = this._prep(this.bc, ctx, h);
 
     ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
 
-    const models = [MODELS['opus46'], MODELS['qwen35']];
-    const colors = [models[0].color, models[1].color];
+    const models = [MODELS['opus46'], MODELS['qwen3627'], MODELS['qwen35']];
+    const colors = models.map(m => m.color);
     const e2e = models.map(m => Math.round(m.stages.reduce((a,b)=>a*b,1)*100));
 
     // Monte Carlo for replicas — same stage-time split as Simulation.
@@ -1142,7 +1142,7 @@ class TimelineRenderer {
       // Section 1: Success rate
       ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
       ctx.fillText('Success rate', padL, yy); yy += 18;
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < models.length; i++) {
         const bw = Math.max(2, rateArea * (e2e[i] / 100));
         drawBar(padL, yy, bw, barH, colors[i]);
         ctx.font = '12px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
@@ -1154,7 +1154,7 @@ class TimelineRenderer {
       yy += sectionGap - modelGap;
       ctx.font = '13px sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
       ctx.fillText('Active replicas after 12h', padL, yy); yy += 18;
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < models.length; i++) {
         const bw = Math.max(2, barArea * (replicas[i] / maxR));
         drawBar(padL, yy, bw, barH, colors[i]);
         ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
@@ -1183,7 +1183,7 @@ class TimelineRenderer {
       ctx.fillText('Success rate', leftX, topY - 12);
       ctx.fillText('Active replicas after 12h', rightX, topY - 12);
 
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < models.length; i++) {
         const by = topY + i * (barH + modelGap);
         const cy = by + barH/2 + 5;
 
@@ -1373,7 +1373,7 @@ class App {
       this.lastFrame = performance.now();
 
       if (this.speed === 0) {
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < models.length; i++) {
           while (!this.sims[i].done) {
             const evs = this.sims[i].step();
             for (const ev of evs) this.logs[i].push(ev);
@@ -1406,7 +1406,7 @@ class App {
 
     while (this.acc >= 1 && steps < maxSteps) {
       let anyActive = false;
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < models.length; i++) {
         if (this.sims[i].done) continue;
         anyActive = true;
         const evs = this.sims[i].step();
