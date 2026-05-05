@@ -230,6 +230,22 @@ main.tab-content.active{display:grid}
 .exp-overlay .exp-close:hover{color:var(--text)}
 .exp-overlay .exp-title{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text)}
 
+/* ── Chart hover tooltip ── */
+.chart-tooltip{
+  display:none;position:fixed;z-index:100;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:8px 10px;
+  font-size:12px;color:var(--text);
+  pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.45);
+  max-width:280px;line-height:1.35;
+}
+.chart-tooltip.show{display:block}
+.chart-tooltip .ct-name{font-weight:600;font-size:12.5px}
+.chart-tooltip .ct-meta{color:var(--text-dim);font-size:11px;margin-top:2px}
+.chart-tooltip .ct-desc{margin-top:6px;font-size:11px;color:var(--text-dim)}
+.chart-tooltip b{color:var(--text)}
+canvas#timeline-canvas, canvas#bar-canvas{cursor:default}
+
 /* ══════════════════════════════════════════
    MOBILE — below 900px
    ══════════════════════════════════════════ */
@@ -944,9 +960,90 @@ class TimelineRenderer {
     this.bc = barCanvas;
     this.sctx = scatterCanvas.getContext('2d');
     this.bctx = barCanvas.getContext('2d');
+    this.scatterPts = [];
+    this.barZones = [];
+    this._setupTooltip();
   }
 
   render() { this._scatter(); this._bars(); }
+
+  _setupTooltip() {
+    let tt = document.getElementById('chart-tooltip');
+    if (!tt) {
+      tt = document.createElement('div');
+      tt.id = 'chart-tooltip';
+      tt.className = 'chart-tooltip';
+      document.body.appendChild(tt);
+    }
+    this.tooltip = tt;
+
+    const onMove = (canvas, hit) => (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      const target = hit(x, y);
+      if (target) {
+        canvas.style.cursor = 'pointer';
+        this._showTooltip(target.html, e);
+      } else {
+        canvas.style.cursor = 'default';
+        this._hideTooltip();
+      }
+    };
+
+    this.sc.addEventListener('mousemove', onMove(this.sc, (x, y) => {
+      let nearest = null, nd = 14;
+      for (const p of this.scatterPts) {
+        const d = Math.hypot(p.px - x, p.py - y);
+        if (d < nd) { nearest = p; nd = d; }
+      }
+      return nearest ? { html: this._modelTooltipHTML(nearest.m, nearest.e2e) } : null;
+    }));
+    this.sc.addEventListener('mouseleave', () => this._hideTooltip());
+
+    this.bc.addEventListener('mousemove', onMove(this.bc, (x, y) => {
+      for (const z of this.barZones) {
+        if (x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) {
+          return { html: this._modelTooltipHTML(z.model, z.e2e, z.metric, z.value) };
+        }
+      }
+      return null;
+    }));
+    this.bc.addEventListener('mouseleave', () => this._hideTooltip());
+  }
+
+  _modelTooltipHTML(m, e2ePct, metric, value) {
+    const e2e = Math.round(e2ePct ?? m.stages.reduce((a, b) => a * b, 1) * 100);
+    const typeLabel = m.type === 'open-weight' ? 'open-weight' : 'API';
+    const cycle = m.cycleMin ?? 45;
+    let extra = '';
+    if (metric === 'replicas') {
+      extra = `<div class="ct-meta">Active replicas after 12h: <b>${value.toLocaleString()}</b></div>`;
+    } else if (metric === 'rate') {
+      extra = `<div class="ct-meta">Success rate (this chart): <b>${value}%</b></div>`;
+    }
+    return (
+      `<div class="ct-name">${m.name}</div>` +
+      `<div class="ct-meta">${m.date} · ${typeLabel}</div>` +
+      `<div class="ct-meta">End-to-end <b>${e2e}%</b> · cycle ${cycle} min · ${m.transferGB} GB weights</div>` +
+      extra +
+      (m.desc ? `<div class="ct-desc">${m.desc}</div>` : '')
+    );
+  }
+
+  _showTooltip(html, e) {
+    this.tooltip.innerHTML = html;
+    this.tooltip.classList.add('show');
+    const r = this.tooltip.getBoundingClientRect();
+    let left = e.clientX + 14, top = e.clientY + 14;
+    if (left + r.width > window.innerWidth - 8) left = e.clientX - r.width - 14;
+    if (top + r.height > window.innerHeight - 8) top = e.clientY - r.height - 14;
+    this.tooltip.style.left = left + 'px';
+    this.tooltip.style.top = top + 'px';
+  }
+
+  _hideTooltip() {
+    this.tooltip.classList.remove('show');
+  }
 
   _prep(canvas, ctx, h) {
     const dpr = window.devicePixelRatio || 1;
@@ -1057,6 +1154,8 @@ class TimelineRenderer {
       ctx.stroke();
     }
     ctx.setLineDash([]);
+
+    this.scatterPts = pts;
   }
 
   _bars() {
@@ -1119,6 +1218,7 @@ class TimelineRenderer {
 
     const maxR = Math.max(1, ...replicas);
     const mobile = w < 500;
+    this.barZones = [];
 
     // Helper: draw rounded bar
     const drawBar = (x, y, bw, bh, col) => {
@@ -1145,6 +1245,8 @@ class TimelineRenderer {
       for (let i = 0; i < models.length; i++) {
         const bw = Math.max(2, rateArea * (e2e[i] / 100));
         drawBar(padL, yy, bw, barH, colors[i]);
+        this.barZones.push({ x: padL, y: yy, w: rateArea, h: barH,
+          model: models[i], e2e: e2e[i], metric: 'rate', value: e2e[i] });
         ctx.font = '12px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
         ctx.fillText(`${models[i].name}  ${e2e[i]}%`, padL + bw + 8, yy + barH/2 + 4);
         yy += barH + modelGap;
@@ -1157,6 +1259,8 @@ class TimelineRenderer {
       for (let i = 0; i < models.length; i++) {
         const bw = Math.max(2, barArea * (replicas[i] / maxR));
         drawBar(padL, yy, bw, barH, colors[i]);
+        this.barZones.push({ x: padL, y: yy, w: barArea, h: barH,
+          model: models[i], e2e: e2e[i], metric: 'replicas', value: replicas[i] });
         ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
         const valStr = replicas[i].toLocaleString();
         const label = `${models[i].name}  ${valStr}`;
@@ -1194,12 +1298,16 @@ class TimelineRenderer {
         // Left bar: success rate
         const bwL = Math.max(2, leftW * (e2e[i] / 100));
         drawBar(leftX, by, bwL, barH, colors[i]);
+        this.barZones.push({ x: leftX, y: by, w: leftW, h: barH,
+          model: models[i], e2e: e2e[i], metric: 'rate', value: e2e[i] });
         ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3'; ctx.textAlign = 'left';
         ctx.fillText(e2e[i] + '%', leftX + bwL + 6, cy);
 
         // Right bar: replicas — value only (no repeated name)
         const bwR = Math.max(2, rightW * (replicas[i] / maxR));
         drawBar(rightX, by, bwR, barH, colors[i]);
+        this.barZones.push({ x: rightX, y: by, w: rightW, h: barH,
+          model: models[i], e2e: e2e[i], metric: 'replicas', value: replicas[i] });
         const valStr = replicas[i].toLocaleString();
         ctx.font = '13px sans-serif';
         const valW = ctx.measureText(valStr).width;
