@@ -374,7 +374,7 @@ main.tab-content.active{display:grid}
       <div class="action-group" style="display:flex;gap:10px;align-items:center">
         <button class="btn-p" id="btn-play">Start</button>
         <span id="finished-label" style="display:none;font-size:16px;color:var(--green)">&#10003;</span>
-        <span class="sim-time" id="sim-time">00:00 <small>/ 06:00</small></span>
+        <span class="sim-time" id="sim-time">0h 00m <small>/ 6h</small></span>
       </div>
       <div class="progress-track"><div class="progress-fill" id="progress-bar"></div></div>
     </div>
@@ -1458,7 +1458,7 @@ class App {
     const maxTime = Math.max(this.sims[0].time, this.sims[1].time);
     const hrs = Math.floor(maxTime / 60), mins = Math.floor(maxTime % 60);
     document.getElementById('sim-time').innerHTML =
-      `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')} <small>/ 06:00</small>`;
+      `${hrs}h ${String(mins).padStart(2,'0')}m <small>/ 6h</small>`;
     document.getElementById('progress-bar').style.width = (maxTime / SIM_DURATION * 100) + '%';
   }
 
