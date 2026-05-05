@@ -1205,7 +1205,7 @@ class TimelineRenderer {
 
     ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
 
-    const models = [MODELS['opus46'], MODELS['qwen3627'], MODELS['qwen36']];
+    const models = [MODELS['opus46'], MODELS['qwen3627'], MODELS['qwen35']];
     const colors = models.map(m => m.color);
     const e2e = models.map(m => Math.round(m.stages.reduce((a,b)=>a*b,1)*100));
 
