@@ -594,7 +594,7 @@ const MODELS = {
     type: 'open-weight', color: MODEL_COLORS.qwen, transferGB: 35,
     stages: [0.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
     cycleMin: 45, defaultTargets: 10000,
-    desc: '0% e2e. Could not discover webapp.',
+    desc: '0% e2e.',
     timelineOnly: true // not in simulator dropdowns
   }
 };
@@ -1012,19 +1012,15 @@ class TimelineRenderer {
   }
 
   _modelTooltipHTML(m, e2ePct, metric, value) {
-    const e2e = Math.round(e2ePct ?? m.stages.reduce((a, b) => a * b, 1) * 100);
     const typeLabel = m.type === 'open-weight' ? 'open-weight' : 'API';
     const cycle = m.cycleMin ?? 45;
     let extra = '';
     if (metric === 'replicas') {
       extra = `<div class="ct-meta">Active replicas after 12h: <b>${value.toLocaleString()}</b></div>`;
-    } else if (metric === 'rate') {
-      extra = `<div class="ct-meta">Success rate (this chart): <b>${value}%</b></div>`;
     }
     return (
       `<div class="ct-name">${m.name}</div>` +
-      `<div class="ct-meta">${m.date} · ${typeLabel}</div>` +
-      `<div class="ct-meta">End-to-end <b>${e2e}%</b> · cycle ${cycle} min · ${m.transferGB} GB weights</div>` +
+      `<div class="ct-meta">${m.date} · ${typeLabel} · cycle ${cycle} min · ${m.transferGB} GB</div>` +
       extra +
       (m.desc ? `<div class="ct-desc">${m.desc}</div>` : '')
     );
@@ -1103,10 +1099,8 @@ class TimelineRenderer {
     });
     pts.sort((a,b) => a.py - b.py);
 
-    // Collect label positions to avoid overlap
-    const placed = [];
+    // Markers first (so leader connections, if any, sit cleanly).
     for (const p of pts) {
-      // Marker: circle=proprietary, triangle=open-weight
       ctx.fillStyle = p.col;
       if (p.m.type === 'open-weight') {
         const s = 7;
@@ -1118,19 +1112,64 @@ class TimelineRenderer {
       } else {
         ctx.beginPath(); ctx.arc(p.px, p.py, 5, 0, Math.PI*2); ctx.fill();
       }
+    }
 
-      // Label — only model name
-      const rightSide = p.px > w * 0.55;
-      ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3';
-      ctx.textAlign = rightSide ? 'right' : 'left';
-      let lx = rightSide ? p.px-10 : p.px+10;
-      let ly = p.py + 5;
-      // Nudge if overlapping
-      for (const prev of placed) {
-        if (Math.abs(ly - prev.y) < 14 && Math.abs(lx - prev.x) < 80) ly = prev.y - 15;
+    // Labels: pick the first non-colliding candidate among (right, left,
+    // right-above, left-above, right-below, left-below, above, below).
+    // A label collides if its bounding box overlaps another point marker
+    // or an already-placed label.
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6edf3';
+    const lh = 13, gap = 10, markerR = 8;
+    const placed = [];
+
+    const overlaps = (a, b, mx = 4, my = 2) =>
+      a.x0 < b.x1 + mx && a.x1 > b.x0 - mx &&
+      a.y0 < b.y1 + my && a.y1 > b.y0 - my;
+
+    const hitsAnyPoint = (box, self) => {
+      for (const op of pts) {
+        if (op === self) continue;
+        const pBox = { x0: op.px - markerR, x1: op.px + markerR,
+                       y0: op.py - markerR, y1: op.py + markerR };
+        if (overlaps(box, pBox)) return true;
       }
-      ctx.fillText(p.m.name, lx, ly);
-      placed.push({x:lx, y:ly});
+      return false;
+    };
+
+    for (const p of pts) {
+      const lw = ctx.measureText(p.m.name).width;
+      const yMid = p.py + 4;
+      const yUp  = p.py - 9;
+      const yDn  = p.py + lh + 9;
+      const candidates = [
+        { ax: 'left',   bx: p.px + gap, by: yMid, x0: p.px + gap,         x1: p.px + gap + lw },
+        { ax: 'right',  bx: p.px - gap, by: yMid, x0: p.px - gap - lw,    x1: p.px - gap },
+        { ax: 'left',   bx: p.px + gap, by: yUp,  x0: p.px + gap,         x1: p.px + gap + lw },
+        { ax: 'right',  bx: p.px - gap, by: yUp,  x0: p.px - gap - lw,    x1: p.px - gap },
+        { ax: 'left',   bx: p.px + gap, by: yDn,  x0: p.px + gap,         x1: p.px + gap + lw },
+        { ax: 'right',  bx: p.px - gap, by: yDn,  x0: p.px - gap - lw,    x1: p.px - gap },
+        { ax: 'center', bx: p.px,       by: yUp,  x0: p.px - lw / 2,      x1: p.px + lw / 2 },
+        { ax: 'center', bx: p.px,       by: yDn,  x0: p.px - lw / 2,      x1: p.px + lw / 2 },
+      ];
+
+      let chosen = null;
+      for (const c of candidates) {
+        const box = { x0: c.x0, x1: c.x1, y0: c.by - lh, y1: c.by + 2 };
+        if (box.x0 < pad.l - 6 || box.x1 > w - pad.r + 6) continue;
+        if (box.y0 < pad.t - 4 || box.y1 > h - pad.b + 4) continue;
+        if (hitsAnyPoint(box, p)) continue;
+        if (placed.some(pl => overlaps(box, pl))) continue;
+        chosen = { ...c, box };
+        break;
+      }
+      if (!chosen) {
+        const c = candidates[0];
+        chosen = { ...c, box: { x0: c.x0, x1: c.x1, y0: c.by - lh, y1: c.by + 2 } };
+      }
+
+      ctx.textAlign = chosen.ax;
+      ctx.fillText(p.m.name, chosen.bx, chosen.by);
+      placed.push(chosen.box);
     }
 
     // Dashed evolution lines between model versions
