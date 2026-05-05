@@ -1520,7 +1520,7 @@ class App {
       this.lastFrame = performance.now();
 
       if (this.speed === 0) {
-        for (let i = 0; i < models.length; i++) {
+        for (let i = 0; i < 2; i++) {
           while (!this.sims[i].done) {
             const evs = this.sims[i].step();
             for (const ev of evs) this.logs[i].push(ev);
@@ -1553,7 +1553,7 @@ class App {
 
     while (this.acc >= 1 && steps < maxSteps) {
       let anyActive = false;
-      for (let i = 0; i < models.length; i++) {
+      for (let i = 0; i < 2; i++) {
         if (this.sims[i].done) continue;
         anyActive = true;
         const evs = this.sims[i].step();
